@@ -14,7 +14,9 @@ if (window.recomendoBotRunning) {
 const logBox = document.createElement('div');
 const logMessages = document.createElement('div');
 const contadorEl = document.createElement('div');
+const progressoEl = document.createElement('div');
 const perfisSeguidos = new Set();
+let perfisSeguidosCount = 0;
 
 // === INTERFACE ===
 
@@ -35,10 +37,13 @@ function criarPainel() {
   `;
   logMessages.style = 'max-height: 160px; overflow-y: auto; white-space: pre-wrap;';
   contadorEl.style = 'margin-top:4px; font-weight:bold;';
+  progressoEl.style = 'margin-top:4px; font-weight:bold;';
   logBox.appendChild(logMessages);
+  logBox.appendChild(progressoEl);
   logBox.appendChild(contadorEl);
   document.body.appendChild(logBox);
   log('✅ Iniciando automação...');
+  atualizarProgresso();
   addBotaoParar();
 }
 
@@ -69,6 +74,10 @@ async function esperar(ms) {
 let contadorAtivo = false;
 function atualizarContador(seg) {
   contadorEl.textContent = seg > 0 ? `⏳ Próxima ação em: ${seg}s` : '';
+}
+
+function atualizarProgresso() {
+  progressoEl.textContent = `Progresso: ${perfisSeguidosCount}/${MAX_PERFIS}`;
 }
 
 async function esperarComContador(segundos) {
@@ -125,6 +134,8 @@ async function curtirFotos(qtd) {
 async function voltarParaModal() {
   history.back();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+  const modal = document.querySelector('div[role="dialog"]');
+  modal?.scrollBy(0, 200);
   log('⬅️ Voltou para lista de seguidores');
 }
 
@@ -136,15 +147,23 @@ async function processarPerfil(botao) {
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
+    const modal = document.querySelector('div[role="dialog"]');
+    modal?.scrollBy(0, 200);
+    return false;
+  }
+
+  botao.click();
+  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+
+  nomePerfil = document.querySelector('header a, h2')?.innerText || nomePerfil || 'desconhecido';
+  if (perfisSeguidos.has(nomePerfil)) {
+    log(`⚠️ Perfil já processado: ${nomePerfil}`);
+    await voltarParaModal();
     return false;
   }
 
   perfisSeguidos.add(nomePerfil);
 
-  botao.click();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-
-  nomePerfil = document.querySelector('header a, h2')?.innerText || 'desconhecido';
   if (nomePerfil === 'desconhecido') {
     log('⚠️ Nome do perfil não encontrado');
   }
@@ -162,6 +181,11 @@ async function processarPerfil(botao) {
   }
 
   const seguiu = await clicarBotaoSeguir(botaoSeguir);
+
+  if (seguiu) {
+    perfisSeguidosCount++;
+    atualizarProgresso();
+  }
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   await curtirFotos(MAX_CURTIDAS);
@@ -197,6 +221,8 @@ chrome.runtime.onMessage.addListener((request) => {
     MAX_CURTIDAS = request.data.maxCurtidas;
     MIN_DELAY = request.data.minDelay * 1000;
     MAX_DELAY = request.data.maxDelay * 1000;
+    perfisSeguidosCount = 0;
+    atualizarProgresso();
     window.recomendoBotRunning = true;
     iniciar().finally(() => {
       window.recomendoBotRunning = false;
