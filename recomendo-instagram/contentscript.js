@@ -50,7 +50,10 @@ function addBotaoParar() {
 
 function log(msg) {
   const tempo = new Date().toLocaleTimeString();
-  logBox.innerHTML += `\n[${tempo}] ${msg}`;
+  const linha = document.createElement('div');
+  linha.textContent = `[${tempo}] ${msg}`;
+  linha.style.marginBottom = '4px';
+  logBox.appendChild(linha);
   logBox.scrollTop = logBox.scrollHeight;
 }
 
@@ -63,16 +66,16 @@ function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function clicarBotaoSeguir(botao) {
+async function clicarBotaoSeguir(botao, perfil) {
   if (!botao) return false;
   const texto = botao.innerText.toLowerCase();
   if (texto === 'seguir') {
     botao.click();
-    log('👤 Seguiu perfil');
+    log(`👤 Seguiu ${perfil}`);
     return true;
   }
   if (texto === 'solicitado' || texto === 'seguindo') {
-    log('ℹ️ Já seguido ou solicitado');
+    log(`ℹ️ Já segue ${perfil}`);
   }
   return false;
 }
@@ -130,7 +133,7 @@ async function processarPerfil(botao) {
   log(`➡️ Visitando: ${nomePerfil}`);
 
   const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
-  await clicarBotaoSeguir(seguirBtn);
+  await clicarBotaoSeguir(seguirBtn, nomePerfil);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   const curtidas = await curtirFotos();
