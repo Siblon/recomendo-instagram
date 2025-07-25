@@ -1,25 +1,16 @@
 // === CONFIGURAÇÕES DO USUÁRIO ===
-let MIN_DELAY = 30000; // 30 segundos
-let MAX_DELAY = 300000; // 5 minutos
+const MIN_DELAY = 30000; // 30 segundos
+const MAX_DELAY = 300000; // 5 minutos
 const DELAY_CURTIDA = 3000; // Delay entre curtidas
 const TEMPO_ESPERA_ENTRE_ACOES = 7000; // Delay entre seguir e curtir, etc.
-let MAX_CURTIDAS = 4; // Configurável entre 0 e 4
+const MAX_CURTIDAS = 4; // Configurável entre 0 e 4
 
-let MAX_PERFIS = Infinity; // Número máximo de perfis a seguir
 // === VARIÁVEIS ===
 let parar = false;
-if (window.recomendoBotRunning) {
-  console.warn('Bot já em execução');
-}
 const logBox = document.createElement('div');
-  const logMessages = document.createElement('div');
-  const contadorEl = document.createElement('div');
-  const progressoEl = document.createElement('div');
 const perfisSeguidos = new Set();
-let perfisSeguidosCount = 0;
 
 // === INTERFACE ===
-
 function criarPainel() {
   logBox.style = `
     position: fixed;
@@ -31,31 +22,11 @@ function criarPainel() {
     font-size: 12px;
     padding: 10px;
     max-height: 200px;
-    width: 300px;
-    overflow: hidden;
+    overflow-y: auto;
     z-index: 9999;
   `;
-  logMessages.style = 'max-height: 160px; overflow-y: auto; white-space: pre-wrap;';
-  contadorEl.style = 'margin-top:4px; font-weight:bold;';
-  progressoEl.id = 'progresso';
-  progressoEl.style = `
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    background: #000;
-    color: lime;
-    font-family: monospace;
-    font-size: 12px;
-    font-weight: bold;
-    padding: 5px;
-    z-index: 999999;
-  `;
-  logBox.appendChild(logMessages);
-  logBox.appendChild(contadorEl);
   document.body.appendChild(logBox);
-  document.body.appendChild(progressoEl);
   log('✅ Iniciando automação...');
-  atualizarProgresso();
   addBotaoParar();
 }
 
@@ -69,12 +40,7 @@ function addBotaoParar() {
 
 function log(msg) {
   const tempo = new Date().toLocaleTimeString();
-  const entry = document.createElement('div');
-  entry.textContent = `[${tempo}] ${msg}`;
-  logMessages.appendChild(entry);
-  if (logMessages.childElementCount > 100) {
-    logMessages.removeChild(logMessages.firstChild);
-  }
+  logBox.innerHTML += `\n[${tempo}] ${msg}`;
   logBox.scrollTop = logBox.scrollHeight;
 }
 
@@ -83,156 +49,74 @@ async function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let contadorAtivo = false;
-function atualizarContador(seg) {
-  contadorEl.textContent = seg > 0 ? `⏳ Próxima ação em: ${seg}s` : '';
-}
-
-function atualizarProgresso() {
-  progressoEl.textContent = `Progresso: ${perfisSeguidosCount}/${MAX_PERFIS}`;
-}
-
-async function esperarComContador(segundos) {
-  if (contadorAtivo || parar) return;
-  contadorAtivo = true;
-  for (let i = segundos; i > 0; i--) {
-    if (parar) break;
-    atualizarContador(i);
-    await esperar(1000);
-  }
-  atualizarContador(0);
-  contadorAtivo = false;
-}
-
 function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function esperarElemento(selector, timeout = 10000, intervalo = 500) {
-  const inicio = Date.now();
-  while (Date.now() - inicio < timeout) {
-    const el = document.querySelector(selector);
-    if (el) return el;
-    await esperar(intervalo);
-  }
-  return null;
-}
-
 async function clicarBotaoSeguir(botao) {
-  if (!botao || botao.innerText.trim() !== 'Seguir') return false;
+  if (!botao || botao.innerText.toLowerCase() !== 'seguir') return false;
   botao.click();
-  await esperar(3000);
-  if (botao.innerText.trim() === 'Seguir' || botao.innerText.trim() === 'Solicitado') {
-    return false;
-  }
-  log('✅ Seguiu perfil');
+  log('👤 Seguiu perfil');
   return true;
 }
 
-async function curtirFotos(qtd) {
-  try {
-    // Scroll forçado para carregar as fotos
-    window.scrollTo({ top: 500, behavior: 'smooth' });
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    window.scrollTo({ top: 1000, behavior: 'smooth' });
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
-    let count = 0;
-
-    for (const btn of botoesLike) {
-      if (count >= qtd) break;
-      btn.parentElement?.click();
-      count++;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+async function curtirFotos() {
+  const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
+  const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (MAX_CURTIDAS + 1)));
+  for (let i = 0; i < fotosCurtidas; i++) {
+    if (parar) return 0;
+    links[i].click();
+    await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+    const botaoLike = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+    if (botaoLike && botaoLike.closest('button')) {
+      botaoLike.closest('button').click();
+      log('❤️ Curtiu 1 foto');
     }
-
-    console.log(`❤️ Curtiu ${count} foto(s)`);
-  } catch (e) {
-    console.warn("❌ Erro ao tentar curtir fotos", e);
+    const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
+    if (botaoFechar && botaoFechar.closest('button')) {
+      botaoFechar.closest('button').click();
+    }
+    await esperar(DELAY_CURTIDA);
   }
-}
-
-async function scrollModal() {
-  const modal = document.querySelector('div[role="dialog"] .isgrP') ||
-                document.querySelector('div[role="dialog"]');
-  if (modal) {
-    modal.scrollBy({ top: 200, behavior: 'smooth' });
-    await esperar(500);
-  }
+  return fotosCurtidas;
 }
 
 async function voltarParaModal() {
   history.back();
-  let modal = await esperarElemento('div[role="dialog"]', TEMPO_ESPERA_ENTRE_ACOES * 4);
-
-  if (!modal) {
-    const seguidoresBtn = await esperarElemento('a[href$="/followers/"], a[href$="/followers"]', TEMPO_ESPERA_ENTRE_ACOES * 2);
-    if (seguidoresBtn) {
-      seguidoresBtn.click();
-      modal = await esperarElemento('div[role="dialog"]', TEMPO_ESPERA_ENTRE_ACOES * 4);
-    }
-  }
-
-  if (modal) {
-    await scrollModal();
-  }
-
+  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
   log('⬅️ Voltou para lista de seguidores');
 }
 
 async function processarPerfil(botao) {
-  if (parar) return false;
+  if (parar) return;
 
   const item = botao.closest('div[role="dialog"] li');
-  let nomePerfil = item?.querySelector('a')?.getAttribute('href')?.split('/')?.[1];
+  const nomePerfil = item
+    ?.querySelector('a')
+    ?.getAttribute('href')
+    ?.split('/')?.[3];
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
-    await scrollModal();
-    return false;
-  }
-
-  botao.click();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-
-  nomePerfil = document.querySelector('header a, h2')?.innerText || nomePerfil || 'desconhecido';
-  if (perfisSeguidos.has(nomePerfil)) {
-    log(`⚠️ Perfil já processado: ${nomePerfil}`);
-    await voltarParaModal();
-    return false;
+    return;
   }
 
   perfisSeguidos.add(nomePerfil);
 
-  if (nomePerfil === 'desconhecido') {
-    log('⚠️ Nome do perfil não encontrado');
-  }
-  log(`🔍 Visitando: ${nomePerfil}`);
+  botao.click();
+  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
-  await esperar(2000);
-  const botaoSeguir = Array.from(document.querySelectorAll('button'))
-    .find(btn => btn.innerText.trim() === 'Seguir');
+  const url = window.location.href;
+  log(`➡️ Visitando: ${nomePerfil}`);
 
-  if (!botaoSeguir) {
-    console.warn("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
-    log("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
-    await scrollModal();
-    return false;
-  }
-
-  const seguiu = await clicarBotaoSeguir(botaoSeguir);
-
-  if (seguiu) {
-    perfisSeguidosCount++;
-    atualizarProgresso();
-  }
+  const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
+  await clicarBotaoSeguir(seguirBtn);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-  await curtirFotos(MAX_CURTIDAS);
+  const curtidas = await curtirFotos();
+  log(`❤️ ${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
-  return seguiu;
 }
 
 async function iniciar() {
@@ -242,31 +126,15 @@ async function iniciar() {
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
   const botoes = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
-  let count = 0;
+
   for (const botao of botoes) {
-    if (parar || count >= MAX_PERFIS) break;
+    if (parar) break;
     const delay = delayAleatorio(MIN_DELAY, MAX_DELAY);
-    const seguiu = await processarPerfil(botao);
-    if (seguiu) count++;
-    await esperarComContador(Math.ceil(delay / 1000));
+    await processarPerfil(botao);
+    log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
+    await esperar(delay);
   }
   log('✅ Fim da automação');
 }
 
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.type === 'config') {
-    if (window.recomendoBotRunning) return;
-    parar = false;
-    contadorAtivo = false;
-    MAX_PERFIS = request.data.maxPerfis;
-    MAX_CURTIDAS = request.data.maxCurtidas;
-    MIN_DELAY = request.data.minDelay * 1000;
-    MAX_DELAY = request.data.maxDelay * 1000;
-    perfisSeguidosCount = 0;
-    atualizarProgresso();
-    window.recomendoBotRunning = true;
-    iniciar().finally(() => {
-      window.recomendoBotRunning = false;
-    });
-  }
-});
+iniciar();
