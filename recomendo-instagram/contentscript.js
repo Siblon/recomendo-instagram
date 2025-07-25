@@ -135,21 +135,28 @@ async function voltarParaModal() {
   log('⬅️ Voltou para lista de seguidores');
 }
 
+function extrairNomeDoPerfil(botao) {
+  const item = botao.closest('li, div');
+  if (!item) return { item: null, link: null, nome: null };
+  const linkPerfil = item.querySelector('a[href^="/"]');
+  if (!linkPerfil) return { item, link: null, nome: null };
+  const href = linkPerfil.getAttribute('href');
+  if (!href) return { item, link: linkPerfil, nome: null };
+  const partes = href.split('/').filter(Boolean);
+  const nome = partes[partes.length - 1];
+  return { item, link: linkPerfil, nome };
+}
+
 async function processarPerfil(botao) {
   if (parar) return;
 
   const modal = getFollowerModal();
-  const item =
-    botao.closest(`${SELECTOR_MODAL} div[role="button"]`)?.parentElement
-      ?.parentElement || botao.closest('div');
+  const { item, link: linkPerfil, nome: nomePerfil } = extrairNomeDoPerfil(botao);
 
   if (!item || !modal || !item.closest(SELECTOR_MODAL)) {
     log('⚠️ Item do perfil não encontrado no modal. Pulando.');
     return;
   }
-
-  const linkPerfil = item?.querySelector('a[href*="/"]');
-  const nomePerfil = linkPerfil?.href?.split('/')?.filter(Boolean)?.pop();
 
   if (!nomePerfil) {
     log('⚠️ Nome do perfil não identificado. Pulando.');
