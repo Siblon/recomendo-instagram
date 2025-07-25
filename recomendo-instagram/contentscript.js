@@ -50,13 +50,17 @@ async function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let contadorRodando = false;
 async function esperarComContador(ms) {
+  while (contadorRodando) await esperar(100); // evita contagens simultâneas
+  contadorRodando = true;
   let restante = Math.ceil(ms / 1000);
   while (restante > 0 && !parar) {
     log(`⏳ Próxima ação em: ${restante}s`);
     await esperar(1000);
     restante--;
   }
+  contadorRodando = false;
 }
 
 function delayAleatorio(min, max) {
@@ -71,24 +75,36 @@ async function clicarBotaoSeguir(botao) {
 }
 
 async function curtirFotos() {
-  const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
-  const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (MAX_CURTIDAS + 1)));
-  for (let i = 0; i < fotosCurtidas; i++) {
-    if (parar) return 0;
-    links[i].click();
-    await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-    const botaoLike = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
-    if (botaoLike && botaoLike.closest('button')) {
-      botaoLike.closest('button').click();
-      log('❤️ Curtiu 1 foto');
+  try {
+    const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
+    if (!links.length) {
+      console.warn('Nenhuma foto encontrada para curtir');
+      return 0;
     }
-    const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
-    if (botaoFechar && botaoFechar.closest('button')) {
-      botaoFechar.closest('button').click();
+    const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (MAX_CURTIDAS + 1)));
+    for (let i = 0; i < fotosCurtidas; i++) {
+      if (parar) return i;
+      links[i].click();
+      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+      const botoesLike = document.querySelectorAll('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+      await esperar(500); // tempo para carregar icones
+      if (botoesLike.length && botoesLike[0].closest('button')) {
+        botoesLike[0].closest('button').click();
+        log('❤️ Curtiu 1 foto');
+      } else {
+        console.warn('Botão curtir não encontrado');
+      }
+      const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
+      if (botaoFechar && botaoFechar.closest('button')) {
+        botaoFechar.closest('button').click();
+      }
+      await esperar(DELAY_CURTIDA);
     }
-    await esperar(DELAY_CURTIDA);
+    return fotosCurtidas;
+  } catch (e) {
+    console.warn('Erro ao curtir fotos', e);
+    return 0;
   }
-  return fotosCurtidas;
 }
 
 async function voltarParaModal() {
