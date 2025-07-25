@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Recomendo Instagram</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #04d361;
+      border: none;
+      color: black;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #03b352;
+    }
+    #stopBot {
+      margin-left: 10px;
+      background-color: red;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Recomendo Instagram</h1>
+  <button id="startBot">Começar</button>
+  <button id="stopBot">Parar</button>
+
+  <script>
+    document.getElementById('startBot').addEventListener('click', () => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { cmd: 'start' });
+      });
+    });
+
+    document.getElementById('stopBot').addEventListener('click', () => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { cmd: 'stop' });
+      });
+    });
+  </script>
+</body>
+</html>
