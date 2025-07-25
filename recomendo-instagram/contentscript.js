@@ -154,12 +154,17 @@ async function processarPerfil(botao) {
 
 async function iniciar() {
   criarPainel();
-  const modal = document.querySelector('div[role="dialog"]');
+  let modal = document.querySelector('div[role="dialog"]');
 
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
   let processados = 0;
   while (!parar && processados < config.maxPerfis) {
+    modal = document.querySelector('div[role="dialog"]');
+    if (!modal) {
+      log('⚠️ Modal de seguidores não encontrado');
+      break;
+    }
     const botaoSeguir = [...modal.querySelectorAll('button')]
       .find(btn => btn.innerText.toLowerCase() === 'seguir');
 
@@ -170,6 +175,9 @@ async function iniciar() {
 
     await processarPerfil(botaoSeguir);
     processados++;
+
+    // Scroll um pouco para carregar mais perfis
+    modal.scrollBy(0, 200);
 
     if (parar) break;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
