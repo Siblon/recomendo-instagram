@@ -108,6 +108,16 @@ function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+async function esperarElemento(selector, timeout = 10000, intervalo = 500) {
+  const inicio = Date.now();
+  while (Date.now() - inicio < timeout) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+    await esperar(intervalo);
+  }
+  return null;
+}
+
 async function clicarBotaoSeguir(botao) {
   if (!botao || botao.innerText.trim() !== 'Seguir') return false;
   botao.click();
@@ -154,17 +164,13 @@ async function scrollModal() {
 
 async function voltarParaModal() {
   history.back();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+  let modal = await esperarElemento('div[role="dialog"]', TEMPO_ESPERA_ENTRE_ACOES * 4);
 
-  let modal = document.querySelector('div[role="dialog"]');
   if (!modal) {
-    const seguidoresBtn = document.querySelector(
-      'a[href$="/followers/"], a[href$="/followers"]'
-    );
+    const seguidoresBtn = await esperarElemento('a[href$="/followers/"], a[href$="/followers"]', TEMPO_ESPERA_ENTRE_ACOES * 2);
     if (seguidoresBtn) {
       seguidoresBtn.click();
-      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-      modal = document.querySelector('div[role="dialog"]');
+      modal = await esperarElemento('div[role="dialog"]', TEMPO_ESPERA_ENTRE_ACOES * 4);
     }
   }
 
