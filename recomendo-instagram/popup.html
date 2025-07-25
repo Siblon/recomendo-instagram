@@ -20,6 +20,22 @@
 </head>
 <body>
   <h3>Recomendo Instagram</h3>
+  <label>Nº máx. de perfis por sessão:<br>
+    <input id="maxPerfis" type="number" min="1" value="10" style="width:100%">
+  </label>
+  <br>
+  <label>Qtd. de fotos para curtir (0-4):<br>
+    <input id="maxCurtidas" type="number" min="0" max="4" value="1" style="width:100%">
+  </label>
+  <br>
+  <label>Delay mínimo (s):<br>
+    <input id="minDelay" type="number" min="0" value="30" style="width:100%">
+  </label>
+  <br>
+  <label>Delay máximo (s):<br>
+    <input id="maxDelay" type="number" min="0" value="60" style="width:100%">
+  </label>
+  <div id="error" style="color:red;margin-top:5px;"></div>
   <button id="iniciarBot">Iniciar Bot</button>
   <script src="popup.js"></script>
 </body>

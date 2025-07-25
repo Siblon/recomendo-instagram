@@ -1,10 +1,11 @@
 // === CONFIGURAÇÕES DO USUÁRIO ===
-const MIN_DELAY = 30000; // 30 segundos
-const MAX_DELAY = 300000; // 5 minutos
+let MIN_DELAY = 30000; // 30 segundos
+let MAX_DELAY = 300000; // 5 minutos
 const DELAY_CURTIDA = 3000; // Delay entre curtidas
 const TEMPO_ESPERA_ENTRE_ACOES = 7000; // Delay entre seguir e curtir, etc.
-const MAX_CURTIDAS = 4; // Configurável entre 0 e 4
+let MAX_CURTIDAS = 4; // Configurável entre 0 e 4
 
+let MAX_PERFIS = Infinity; // Número máximo de perfis a seguir
 // === VARIÁVEIS ===
 let parar = false;
 const logBox = document.createElement('div');
@@ -126,15 +127,24 @@ async function iniciar() {
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
   const botoes = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
-
+  let count = 0;
   for (const botao of botoes) {
-    if (parar) break;
+    if (parar || count >= MAX_PERFIS) break;
     const delay = delayAleatorio(MIN_DELAY, MAX_DELAY);
     await processarPerfil(botao);
+    count++;
     log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
     await esperar(delay);
   }
   log('✅ Fim da automação');
 }
 
-iniciar();
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.type === 'config') {
+    MAX_PERFIS = request.data.maxPerfis;
+    MAX_CURTIDAS = request.data.maxCurtidas;
+    MIN_DELAY = request.data.minDelay * 1000;
+    MAX_DELAY = request.data.maxDelay * 1000;
+    iniciar();
+  }
+});
