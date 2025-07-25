@@ -50,6 +50,15 @@ async function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function esperarComContador(ms) {
+  let restante = Math.ceil(ms / 1000);
+  while (restante > 0 && !parar) {
+    log(`⏳ Próxima ação em: ${restante}s`);
+    await esperar(1000);
+    restante--;
+  }
+}
+
 function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -92,7 +101,7 @@ async function processarPerfil(botao) {
   if (parar) return;
 
   const item = botao.closest('div[role="dialog"] li');
-  const nomePerfil = item
+  let nomePerfil = item
     ?.querySelector('a')
     ?.getAttribute('href')
     ?.split('/')?.[3];
@@ -107,8 +116,12 @@ async function processarPerfil(botao) {
   botao.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
-  const url = window.location.href;
-  log(`➡️ Visitando: ${nomePerfil}`);
+  nomePerfil = document.querySelector('h2, header a')?.innerText || nomePerfil;
+  if (nomePerfil) {
+    log(`➡️ Visitando: ${nomePerfil}`);
+  } else {
+    log('⚠️ Nome do perfil não encontrado');
+  }
 
   const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
   await clicarBotaoSeguir(seguirBtn);
@@ -133,8 +146,7 @@ async function iniciar() {
     const delay = delayAleatorio(MIN_DELAY, MAX_DELAY);
     await processarPerfil(botao);
     count++;
-    log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
-    await esperar(delay);
+    await esperarComContador(delay);
   }
   log('✅ Fim da automação');
 }

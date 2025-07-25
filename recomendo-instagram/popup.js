@@ -1,26 +1,20 @@
-function mostrarErro(msg) {
-  document.getElementById("error").textContent = msg;
-}
-
 document.getElementById("iniciarBot").addEventListener("click", () => {
   const maxPerfis = parseInt(document.getElementById("maxPerfis").value, 10);
   const maxCurtidas = parseInt(document.getElementById("maxCurtidas").value, 10);
   const minDelay = parseInt(document.getElementById("minDelay").value, 10);
   const maxDelay = parseInt(document.getElementById("maxDelay").value, 10);
 
-  mostrarErro("");
-
   if (isNaN(maxPerfis) || maxPerfis <= 0) {
-    return mostrarErro("Número de perfis inválido");
+    return alert("Número de perfis inválido");
   }
   if (isNaN(maxCurtidas) || maxCurtidas < 0 || maxCurtidas > 4) {
-    return mostrarErro("Fotos para curtir deve ser 0-4");
+    return alert("Fotos para curtir deve ser 0-4");
   }
   if (isNaN(minDelay) || minDelay < 0) {
-    return mostrarErro("Delay mínimo inválido");
+    return alert("Delay mínimo inválido");
   }
   if (isNaN(maxDelay) || maxDelay < minDelay) {
-    return mostrarErro("Delay máximo deve ser >= mínimo");
+    return alert("Delay máximo deve ser >= mínimo");
   }
 
   const config = { maxPerfis, maxCurtidas, minDelay, maxDelay };
