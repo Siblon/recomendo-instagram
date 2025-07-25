@@ -87,7 +87,6 @@ async function scrollModal(modal = getFollowerModal()) {
     // fallback to any child with vertical overflow
     select('[style*="overflow-y"]', modal) ||
     modal;
-  console.log(modal.querySelector('.isgrP'));
   container.scrollBy({ top: 200, behavior: 'smooth' });
   await esperar(delayAleatorio(1000, 6000));
 }
@@ -139,7 +138,11 @@ async function voltarParaModal() {
 async function processarPerfil(botao) {
   if (parar) return;
 
-  const item = botao.closest(`${SELECTOR_MODAL} li`);
+  const item = botao.closest('li');
+  if (!item || !item.closest(SELECTOR_MODAL)) {
+    log('⚠️ Item do perfil não encontrado no modal. Pulando.');
+    return;
+  }
   const linkPerfil = select('a', item);
   const nomePerfil = linkPerfil?.getAttribute('href')?.split('/')?.[3];
 
