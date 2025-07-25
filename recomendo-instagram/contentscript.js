@@ -80,14 +80,16 @@ function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function scrollModal(modal = getFollowerModal()) {
+async function scrollModal(modal = getFollowerModal()) {
   if (!modal) return;
   const container =
     select('.isgrP', modal) ||
     // fallback to any child with vertical overflow
     select('[style*="overflow-y"]', modal) ||
     modal;
+  console.log(modal.querySelector('.isgrP'));
   container.scrollBy({ top: 200, behavior: 'smooth' });
+  await esperar(delayAleatorio(1000, 6000));
 }
 
 async function clicarBotaoSeguir(botao, perfil) {
@@ -150,15 +152,13 @@ async function processarPerfil(botao) {
 
   if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
     log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
-    scrollModal();
-    await esperar(500);
+    await scrollModal();
     return;
   }
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: @${nomePerfil}`);
-    scrollModal();
-    await esperar(500);
+    await scrollModal();
     return;
   }
 
@@ -177,7 +177,7 @@ async function processarPerfil(botao) {
   log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
-  scrollModal();
+  await scrollModal();
 }
 
 async function iniciar() {
@@ -197,15 +197,14 @@ async function iniciar() {
 
     if (botoesSeguir.length === 0) {
       log('⚠️ Nenhum botão "Seguir" restante');
-      scrollModal(modal);
-      await esperar(500);
+      await scrollModal(modal);
       continue;
     }
 
     await processarPerfil(botoesSeguir[0]);
     processados++;
 
-    scrollModal(modal);
+    await scrollModal(modal);
 
     if (parar) break;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
