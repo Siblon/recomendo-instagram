@@ -64,10 +64,17 @@ function delayAleatorio(min, max) {
 }
 
 async function clicarBotaoSeguir(botao) {
-  if (!botao || botao.innerText.toLowerCase() !== 'seguir') return false;
-  botao.click();
-  log('👤 Seguiu perfil');
-  return true;
+  if (!botao) return false;
+  const texto = botao.innerText.toLowerCase();
+  if (texto === 'seguir') {
+    botao.click();
+    log('👤 Seguiu perfil');
+    return true;
+  }
+  if (texto === 'solicitado' || texto === 'seguindo') {
+    log('ℹ️ Já seguido ou solicitado');
+  }
+  return false;
 }
 
 async function curtirFotos() {
@@ -138,18 +145,25 @@ async function iniciar() {
 
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
-  const botoes = [...modal.querySelectorAll('button')]
-    .filter(btn => btn.innerText.toLowerCase() === 'seguir')
-    .slice(0, config.maxPerfis);
+  let processados = 0;
+  while (!parar && processados < config.maxPerfis) {
+    const botaoSeguir = [...modal.querySelectorAll('button')]
+      .find(btn => btn.innerText.toLowerCase() === 'seguir');
 
-  for (const botao of botoes) {
-    if (parar) break;
-    await processarPerfil(botao);
+    if (!botaoSeguir) {
+      log('⚠️ Nenhum botão "Seguir" restante');
+      break;
+    }
+
+    await processarPerfil(botaoSeguir);
+    processados++;
+
     if (parar) break;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
     log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
     await esperar(delay);
   }
+
   log('✅ Fim da automação');
 }
 
