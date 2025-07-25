@@ -139,14 +139,30 @@ function extrairNomeDoPerfil(botao) {
   const item = botao.closest('li') || botao.closest('div');
   if (!item) return { item: null, link: null, nome: null };
 
-  let linkPerfil = item.querySelector('a[href^="/"]');
-  if (!linkPerfil) {
-    linkPerfil = item.querySelector('a[href*="instagram.com"]');
+  const modalRoot = item.closest(SELECTOR_MODAL);
+  let current = item;
+  let linkPerfil = null;
+  let inspected = item;
+
+  while (current) {
+    inspected = current;
+    linkPerfil =
+      current.querySelector('a[href^="/"]') ||
+      current.querySelector('a[href*="instagram.com"]');
+    if (linkPerfil || current === modalRoot) break;
+    current = current.parentElement;
+  }
+
+  if (!linkPerfil && current === modalRoot) {
+    inspected = current;
+    linkPerfil =
+      current.querySelector('a[href^="/"]') ||
+      current.querySelector('a[href*="instagram.com"]');
   }
 
   if (!linkPerfil) {
     log('⚠️ Link do perfil não encontrado');
-    log(item.outerHTML);
+    if (inspected) log(inspected.outerHTML);
     return { item, link: null, nome: null };
   }
 
