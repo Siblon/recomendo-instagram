@@ -81,8 +81,13 @@ function delayAleatorio(min, max) {
 }
 
 function scrollModal(modal = getFollowerModal()) {
-  const container = select('.isgrP', modal) || modal;
-  container?.scrollBy({ top: 200, behavior: 'smooth' });
+  if (!modal) return;
+  const container =
+    select('.isgrP', modal) ||
+    // fallback to any child with vertical overflow
+    select('[style*="overflow-y"]', modal) ||
+    modal;
+  container.scrollBy({ top: 200, behavior: 'smooth' });
 }
 
 async function clicarBotaoSeguir(botao, perfil) {
