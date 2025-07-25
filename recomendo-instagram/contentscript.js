@@ -91,7 +91,10 @@ async function processarPerfil(botao) {
   if (parar) return;
 
   const item = botao.closest('div[role="dialog"] li');
-  const nomePerfil = item?.querySelector('a')?.href.split('/')[3];
+  const nomePerfil = item
+    ?.querySelector('a')
+    ?.getAttribute('href')
+    ?.split('/')?.[3];
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
