@@ -66,6 +66,11 @@ function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function scrollModal(modal = document.querySelector('div[role="dialog"]')) {
+  const container = modal?.querySelector('.isgrP') || modal;
+  container?.scrollBy({ top: 200, behavior: 'smooth' });
+}
+
 async function clicarBotaoSeguir(botao, perfil) {
   if (!botao) return false;
   const texto = botao.innerText.toLowerCase();
@@ -124,7 +129,7 @@ async function processarPerfil(botao) {
   if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
     log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
     const modal = botao.closest('div[role="dialog"]');
-    modal?.scrollBy(0, 200);
+    scrollModal(modal);
     await esperar(500);
     return;
   }
@@ -150,6 +155,7 @@ async function processarPerfil(botao) {
   log(`❤️ ${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
+  scrollModal();
 }
 
 async function iniciar() {
@@ -170,14 +176,16 @@ async function iniciar() {
 
     if (!botaoSeguir) {
       log('⚠️ Nenhum botão "Seguir" restante');
-      break;
+      scrollModal(modal);
+      await esperar(500);
+      continue;
     }
 
     await processarPerfil(botaoSeguir);
     processados++;
 
     // Scroll um pouco para carregar mais perfis
-    modal.scrollBy(0, 200);
+    scrollModal(modal);
 
     if (parar) break;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
