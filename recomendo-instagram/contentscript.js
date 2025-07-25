@@ -43,7 +43,17 @@ function criarPainel() {
 function addBotaoParar() {
   const btn = document.createElement('button');
   btn.innerText = 'PARAR';
-  btn.style = `position: fixed; bottom: 10px; left: 10px; background: red; color: white; border: none; padding: 10px; z-index: 9999; font-weight: bold;`;
+  btn.style = `
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: red;
+    color: white;
+    border: none;
+    padding: 10px;
+    z-index: 9999;
+    font-weight: bold;
+  `;
   btn.onclick = () => parar = true;
   document.body.appendChild(btn);
 }
@@ -76,11 +86,11 @@ async function clicarBotaoSeguir(botao, perfil) {
   const texto = botao.innerText.toLowerCase();
   if (texto === 'seguir') {
     botao.click();
-    log(`👤 Seguiu ${perfil}`);
+    log(`👤 Seguiu @${perfil}`);
     return true;
   }
   if (texto === 'solicitado' || texto === 'seguindo') {
-    log(`ℹ️ Já segue ${perfil}`);
+    log(`ℹ️ Já segue @${perfil}`);
   }
   return false;
 }
@@ -120,22 +130,26 @@ async function processarPerfil(botao) {
 
   const item = botao.closest('div[role="dialog"] li');
   const linkPerfil = item?.querySelector('a');
-  const nomePerfil = linkPerfil
-    ?.getAttribute('href')
-    ?.split('/')?.[3];
+  const nomePerfil = linkPerfil?.getAttribute('href')?.split('/')?.[3];
+
+  if (!nomePerfil) {
+    log('⚠️ Nome do perfil não identificado. Pulando.');
+    return;
+  }
 
   const textoBotao = botao.innerText?.toLowerCase();
 
   if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
     log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
-    const modal = botao.closest('div[role="dialog"]');
-    scrollModal(modal);
+    scrollModal();
     await esperar(500);
     return;
   }
 
   if (perfisSeguidos.has(nomePerfil)) {
-    log(`⚠️ Perfil já processado: ${nomePerfil}`);
+    log(`⚠️ Perfil já processado: @${nomePerfil}`);
+    scrollModal();
+    await esperar(500);
     return;
   }
 
@@ -144,15 +158,14 @@ async function processarPerfil(botao) {
   linkPerfil?.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
-  const url = window.location.href;
-  log(`➡️ Visitando: ${nomePerfil}`);
+  log(`➡️ Visitando: @${nomePerfil}`);
 
   const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   const curtidas = await curtirFotos();
-  log(`❤️ ${nomePerfil}: curtiu ${curtidas} foto(s)`);
+  log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
   scrollModal();
@@ -171,20 +184,18 @@ async function iniciar() {
       log('⚠️ Modal de seguidores não encontrado');
       break;
     }
-    const botaoSeguir = [...modal.querySelectorAll('button')]
-      .find(btn => btn.innerText.toLowerCase() === 'seguir');
+    const botoesSeguir = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
 
-    if (!botaoSeguir) {
+    if (botoesSeguir.length === 0) {
       log('⚠️ Nenhum botão "Seguir" restante');
       scrollModal(modal);
       await esperar(500);
       continue;
     }
 
-    await processarPerfil(botaoSeguir);
+    await processarPerfil(botoesSeguir[0]);
     processados++;
 
-    // Scroll um pouco para carregar mais perfis
     scrollModal(modal);
 
     if (parar) break;
