@@ -136,21 +136,26 @@ async function voltarParaModal() {
 }
 
 function extrairNomeDoPerfil(botao) {
-  const item = botao.closest('li, div');
+  const item = botao.closest('li') || botao.closest('div');
   if (!item) return { item: null, link: null, nome: null };
+
   let linkPerfil = item.querySelector('a[href^="/"]');
   if (!linkPerfil) {
     linkPerfil = item.querySelector('a[href*="instagram.com"]');
   }
+
   if (!linkPerfil) {
     log('⚠️ Link do perfil não encontrado');
+    log(item.outerHTML);
     return { item, link: null, nome: null };
   }
+
   const hrefCompleto = linkPerfil.getAttribute('href') || linkPerfil.href;
   if (!hrefCompleto) {
     log('⚠️ Link do perfil sem href');
     return { item, link: linkPerfil, nome: null };
   }
+
   const hrefSemQuery = hrefCompleto.split('?')[0];
   const partes = hrefSemQuery.split('/').filter(Boolean);
   const nome = partes[partes.length - 1] || null;
