@@ -138,12 +138,22 @@ async function voltarParaModal() {
 function extrairNomeDoPerfil(botao) {
   const item = botao.closest('li, div');
   if (!item) return { item: null, link: null, nome: null };
-  const linkPerfil = item.querySelector('a[href^="/"]');
-  if (!linkPerfil) return { item, link: null, nome: null };
-  const href = linkPerfil.getAttribute('href');
-  if (!href) return { item, link: linkPerfil, nome: null };
-  const partes = href.split('/').filter(Boolean);
-  const nome = partes[partes.length - 1];
+  let linkPerfil = item.querySelector('a[href^="/"]');
+  if (!linkPerfil) {
+    linkPerfil = item.querySelector('a[href*="instagram.com"]');
+  }
+  if (!linkPerfil) {
+    log('⚠️ Link do perfil não encontrado');
+    return { item, link: null, nome: null };
+  }
+  const hrefCompleto = linkPerfil.getAttribute('href') || linkPerfil.href;
+  if (!hrefCompleto) {
+    log('⚠️ Link do perfil sem href');
+    return { item, link: linkPerfil, nome: null };
+  }
+  const hrefSemQuery = hrefCompleto.split('?')[0];
+  const partes = hrefSemQuery.split('/').filter(Boolean);
+  const nome = partes[partes.length - 1] || null;
   return { item, link: linkPerfil, nome };
 }
 
