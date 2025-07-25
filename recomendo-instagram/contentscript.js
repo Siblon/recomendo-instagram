@@ -5,6 +5,16 @@ const DELAY_CURTIDA = 3000; // Delay entre curtidas
 const TEMPO_ESPERA_ENTRE_ACOES = 7000; // Delay entre seguir e curtir, etc.
 const MAX_CURTIDAS = 4; // Configurável entre 0 e 4
 
+const DEFAULT_CONFIG = {
+  maxPerfis: Infinity,
+  maxCurtidas: MAX_CURTIDAS,
+  minDelay: MIN_DELAY,
+  maxDelay: MAX_DELAY
+};
+
+let config = { ...DEFAULT_CONFIG };
+let iniciado = false;
+
 // === VARIÁVEIS ===
 let parar = false;
 const logBox = document.createElement('div');
@@ -62,7 +72,10 @@ async function clicarBotaoSeguir(botao) {
 
 async function curtirFotos() {
   const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
-  const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (MAX_CURTIDAS + 1)));
+  const fotosCurtidas = Math.min(
+    links.length,
+    Math.floor(Math.random() * (config.maxCurtidas + 1))
+  );
   for (let i = 0; i < fotosCurtidas; i++) {
     if (parar) return 0;
     links[i].click();
@@ -91,8 +104,8 @@ async function processarPerfil(botao) {
   if (parar) return;
 
   const item = botao.closest('div[role="dialog"] li');
-  const nomePerfil = item
-    ?.querySelector('a')
+  const linkPerfil = item?.querySelector('a');
+  const nomePerfil = linkPerfil
     ?.getAttribute('href')
     ?.split('/')?.[3];
 
@@ -103,7 +116,7 @@ async function processarPerfil(botao) {
 
   perfisSeguidos.add(nomePerfil);
 
-  botao.click();
+  linkPerfil?.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
   const url = window.location.href;
@@ -125,16 +138,31 @@ async function iniciar() {
 
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
-  const botoes = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
+  const botoes = [...modal.querySelectorAll('button')]
+    .filter(btn => btn.innerText.toLowerCase() === 'seguir')
+    .slice(0, config.maxPerfis);
 
   for (const botao of botoes) {
     if (parar) break;
-    const delay = delayAleatorio(MIN_DELAY, MAX_DELAY);
     await processarPerfil(botao);
+    if (parar) break;
+    const delay = delayAleatorio(config.minDelay, config.maxDelay);
     log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
     await esperar(delay);
   }
   log('✅ Fim da automação');
 }
 
-iniciar();
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.type === 'config') {
+    const { maxPerfis, maxCurtidas, minDelay, maxDelay } = request.data;
+    config.maxPerfis = Number(maxPerfis) || DEFAULT_CONFIG.maxPerfis;
+    config.maxCurtidas = Math.min(Number(maxCurtidas), MAX_CURTIDAS);
+    config.minDelay = (Number(minDelay) || MIN_DELAY / 1000) * 1000;
+    config.maxDelay = (Number(maxDelay) || MAX_DELAY / 1000) * 1000;
+    if (!iniciado) {
+      iniciado = true;
+      iniciar();
+    }
+  }
+});
