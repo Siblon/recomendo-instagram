@@ -119,6 +119,16 @@ async function processarPerfil(botao) {
     ?.getAttribute('href')
     ?.split('/')?.[3];
 
+  const textoBotao = botao.innerText?.toLowerCase();
+
+  if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
+    log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
+    const modal = botao.closest('div[role="dialog"]');
+    modal?.scrollBy(0, 200);
+    await esperar(500);
+    return;
+  }
+
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
     return;
