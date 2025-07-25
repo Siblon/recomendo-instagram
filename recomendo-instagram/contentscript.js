@@ -12,24 +12,11 @@ if (window.recomendoBotRunning) {
   console.warn('Bot já em execução');
 }
 const logBox = document.createElement('div');
+const logMessages = document.createElement('div');
+const contadorEl = document.createElement('div');
 const perfisSeguidos = new Set();
 
 // === INTERFACE ===
-
-let contadorAtivo = false;
-
-async function esperarComContador(segundos) {
-  if (contadorAtivo || stopBot) return;
-  contadorAtivo = true;
-
-  for (let i = segundos; i > 0; i--) {
-    if (stopBot) break;
-    console.log(`⏳ Próxima ação em: ${i}s`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
-  contadorAtivo = false;
-}
 
 function criarPainel() {
   logBox.style = `
@@ -42,9 +29,14 @@ function criarPainel() {
     font-size: 12px;
     padding: 10px;
     max-height: 200px;
-    overflow-y: auto;
+    width: 300px;
+    overflow: hidden;
     z-index: 9999;
   `;
+  logMessages.style = 'max-height: 160px; overflow-y: auto; white-space: pre-wrap;';
+  contadorEl.style = 'margin-top:4px; font-weight:bold;';
+  logBox.appendChild(logMessages);
+  logBox.appendChild(contadorEl);
   document.body.appendChild(logBox);
   log('✅ Iniciando automação...');
   addBotaoParar();
@@ -60,7 +52,12 @@ function addBotaoParar() {
 
 function log(msg) {
   const tempo = new Date().toLocaleTimeString();
-  logBox.innerHTML += `\n[${tempo}] ${msg}`;
+  const entry = document.createElement('div');
+  entry.textContent = `[${tempo}] ${msg}`;
+  logMessages.appendChild(entry);
+  if (logMessages.childElementCount > 100) {
+    logMessages.removeChild(logMessages.firstChild);
+  }
   logBox.scrollTop = logBox.scrollHeight;
 }
 
@@ -70,14 +67,19 @@ async function esperar(ms) {
 }
 
 let contadorAtivo = false;
+function atualizarContador(seg) {
+  contadorEl.textContent = seg > 0 ? `⏳ Próxima ação em: ${seg}s` : '';
+}
+
 async function esperarComContador(segundos) {
   if (contadorAtivo || parar) return;
   contadorAtivo = true;
   for (let i = segundos; i > 0; i--) {
     if (parar) break;
-    log(`⏳ Próxima ação em: ${i}s`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    atualizarContador(i);
+    await esperar(1000);
   }
+  atualizarContador(0);
   contadorAtivo = false;
 }
 
