@@ -158,19 +158,19 @@ function extrairNomeDoPerfil(botao) {
 }
 
 async function processarPerfil(botao) {
-  if (parar) return;
+  if (parar) return false;
 
   const modal = getFollowerModal();
   const { item, link: linkPerfil, nome: nomePerfil } = extrairNomeDoPerfil(botao);
 
   if (!item || !modal || !item.closest(SELECTOR_MODAL)) {
     log('⚠️ Item do perfil não encontrado no modal. Pulando.');
-    return;
+    return false;
   }
 
   if (!nomePerfil) {
     log('⚠️ Nome do perfil não identificado. Pulando.');
-    return;
+    return false;
   }
 
   const textoBotao = botao.innerText?.toLowerCase();
@@ -178,13 +178,13 @@ async function processarPerfil(botao) {
   if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
     log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
     await scrollModal();
-    return;
+    return false;
   }
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: @${nomePerfil}`);
     await scrollModal();
-    return;
+    return false;
   }
 
   perfisSeguidos.add(nomePerfil);
@@ -203,6 +203,8 @@ async function processarPerfil(botao) {
 
   await voltarParaModal();
   await scrollModal();
+
+  return true;
 }
 
 async function iniciar() {
@@ -226,8 +228,10 @@ async function iniciar() {
       continue;
     }
 
-    await processarPerfil(botoesSeguir[0]);
-    processados++;
+    const perfilProcessado = await processarPerfil(botoesSeguir[0]);
+    if (perfilProcessado) {
+      processados++;
+    }
 
     await scrollModal(modal);
 
