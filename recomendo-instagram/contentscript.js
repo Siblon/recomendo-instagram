@@ -136,7 +136,7 @@ async function voltarParaModal() {
 }
 
 function extrairNomeDoPerfil(botao) {
-  const item = botao.closest('li, div');
+  const item = botao.closest('li') || botao.closest('div');
   if (!item) return { item: null, link: null, nome: null };
   let linkPerfil = item.querySelector('a[href^="/"]');
   if (!linkPerfil) {
