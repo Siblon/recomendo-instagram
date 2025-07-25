@@ -155,7 +155,23 @@ async function scrollModal() {
 async function voltarParaModal() {
   history.back();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-  await scrollModal();
+
+  let modal = document.querySelector('div[role="dialog"]');
+  if (!modal) {
+    const seguidoresBtn = document.querySelector(
+      'a[href$="/followers/"], a[href$="/followers"]'
+    );
+    if (seguidoresBtn) {
+      seguidoresBtn.click();
+      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+      modal = document.querySelector('div[role="dialog"]');
+    }
+  }
+
+  if (modal) {
+    await scrollModal();
+  }
+
   log('⬅️ Voltou para lista de seguidores');
 }
 
