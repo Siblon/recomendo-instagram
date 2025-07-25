@@ -55,12 +55,12 @@ async function esperar(ms) {
 
 let contadorAtivo = false;
 async function esperarComContador(segundos) {
-  if (contadorAtivo) return;
+  if (contadorAtivo || parar) return;
   contadorAtivo = true;
   for (let i = segundos; i > 0; i--) {
     if (parar) break;
     log(`⏳ Próxima ação em: ${i}s`);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
   contadorAtivo = false;
 }
@@ -70,48 +70,33 @@ function delayAleatorio(min, max) {
 }
 
 async function clicarBotaoSeguir(botao) {
-  if (!botao || botao.innerText.toLowerCase() !== 'seguir') return false;
+  if (!botao || botao.innerText.trim() !== 'Seguir') return false;
   botao.click();
-  log('👤 Seguiu perfil');
+  await esperar(1000);
+  if (botao.innerText.trim() === 'Seguir' || botao.innerText.trim() === 'Solicitado') {
+    return false;
+  }
+  log('✅ Seguiu perfil');
   return true;
 }
 
-async function curtirFotos() {
-  await esperar(2000);
-  const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
-  if (!links.length) {
-    log('⚠️ Nenhuma foto encontrada para curtir neste perfil.');
+async function curtirFotos(qtd) {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
+    let count = 0;
+    for (const btn of botoesLike) {
+      if (parar || count >= qtd) break;
+      btn.parentElement?.click();
+      count++;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    log(`❤️ Curtiu ${count} foto(s)`);
+    return count;
+  } catch (e) {
+    console.warn('Erro ao tentar curtir fotos', e);
     return 0;
   }
-
-  let fotosCurtidas = Math.floor(Math.random() * (MAX_CURTIDAS + 1));
-  if (MAX_CURTIDAS > 0 && fotosCurtidas === 0) fotosCurtidas = 1;
-  fotosCurtidas = Math.min(links.length, fotosCurtidas);
-  let curtidasRealizadas = 0;
-  for (let i = 0; i < fotosCurtidas; i++) {
-    if (parar) return curtidasRealizadas;
-    try {
-      links[i].click();
-      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-      const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
-      await esperar(500);
-      if (botoesLike.length && botoesLike[0].closest('button')) {
-        botoesLike[0].closest('button').click();
-        curtidasRealizadas++;
-        log('❤️ Curtiu 1 foto');
-      } else {
-        log('⚠️ Botão curtir não encontrado');
-      }
-      const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
-      if (botaoFechar && botaoFechar.closest('button')) {
-        botaoFechar.closest('button').click();
-      }
-      await esperar(DELAY_CURTIDA);
-    } catch (e) {
-      log('❌ Erro ao curtir foto');
-    }
-  }
-  return curtidasRealizadas;
 }
 
 async function voltarParaModal() {
@@ -124,10 +109,7 @@ async function processarPerfil(botao) {
   if (parar) return false;
 
   const item = botao.closest('div[role="dialog"] li');
-  let nomePerfil = item
-    ?.querySelector('a')
-    ?.getAttribute('href')
-    ?.split('/')?.[3];
+  let nomePerfil = item?.querySelector('a')?.getAttribute('href')?.split('/')?.[1];
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
@@ -146,18 +128,20 @@ async function processarPerfil(botao) {
   log(`🔍 Visitando: ${nomePerfil}`);
 
   await esperar(2000);
-  const seguirBtn = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText === 'Seguir');
-  if (!seguirBtn) {
+  const botaoSeguir = Array.from(document.querySelectorAll('button'))
+    .find(btn => btn.innerText.trim() === 'Seguir');
+
+  if (!botaoSeguir) {
+    console.warn("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
     log("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
     await voltarParaModal();
     return false;
   }
 
-  const seguiu = await clicarBotaoSeguir(seguirBtn);
+  const seguiu = await clicarBotaoSeguir(botaoSeguir);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-  const curtidas = await curtirFotos();
-  log(`❤️ Curtiu ${curtidas} foto(s)`);
+  await curtirFotos(MAX_CURTIDAS);
 
   await voltarParaModal();
   return seguiu;
