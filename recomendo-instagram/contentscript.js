@@ -53,17 +53,16 @@ async function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let contadorRodando = false;
-async function esperarComContador(ms) {
-  while (contadorRodando) await esperar(100); // evita contagens simultâneas
-  contadorRodando = true;
-  let restante = Math.ceil(ms / 1000);
-  while (restante > 0 && !parar) {
-    log(`⏳ Próxima ação em: ${restante}s`);
-    await esperar(1000);
-    restante--;
+let contadorAtivo = false;
+async function esperarComContador(segundos) {
+  if (contadorAtivo) return;
+  contadorAtivo = true;
+  for (let i = segundos; i > 0; i--) {
+    if (parar) break;
+    log(`⏳ Próxima ação em: ${i}s`);
+    await new Promise(r => setTimeout(r, 1000));
   }
-  contadorRodando = false;
+  contadorAtivo = false;
 }
 
 function delayAleatorio(min, max) {
@@ -78,39 +77,41 @@ async function clicarBotaoSeguir(botao) {
 }
 
 async function curtirFotos() {
-  try {
-    const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
-    if (!links.length) {
-      console.warn('Nenhuma foto encontrada para curtir');
-      return 0;
-    }
+  await esperar(2000);
+  const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
+  if (!links.length) {
+    log('⚠️ Nenhuma foto encontrada para curtir neste perfil.');
+    return 0;
+  }
 
-    let fotosCurtidas = Math.floor(Math.random() * (MAX_CURTIDAS + 1));
-    if (MAX_CURTIDAS > 0 && fotosCurtidas === 0) fotosCurtidas = 1;
-    fotosCurtidas = Math.min(links.length, fotosCurtidas);
-    for (let i = 0; i < fotosCurtidas; i++) {
-      if (parar) return i;
+  let fotosCurtidas = Math.floor(Math.random() * (MAX_CURTIDAS + 1));
+  if (MAX_CURTIDAS > 0 && fotosCurtidas === 0) fotosCurtidas = 1;
+  fotosCurtidas = Math.min(links.length, fotosCurtidas);
+  let curtidasRealizadas = 0;
+  for (let i = 0; i < fotosCurtidas; i++) {
+    if (parar) return curtidasRealizadas;
+    try {
       links[i].click();
       await esperar(TEMPO_ESPERA_ENTRE_ACOES);
       const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
-      await esperar(500); // tempo para carregar icones
+      await esperar(500);
       if (botoesLike.length && botoesLike[0].closest('button')) {
         botoesLike[0].closest('button').click();
+        curtidasRealizadas++;
         log('❤️ Curtiu 1 foto');
       } else {
-        console.warn('Botão curtir não encontrado');
+        log('⚠️ Botão curtir não encontrado');
       }
       const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
       if (botaoFechar && botaoFechar.closest('button')) {
         botaoFechar.closest('button').click();
       }
       await esperar(DELAY_CURTIDA);
+    } catch (e) {
+      log('❌ Erro ao curtir foto');
     }
-    return fotosCurtidas;
-  } catch (e) {
-    console.warn('Erro ao curtir fotos', e);
-    return 0;
   }
+  return curtidasRealizadas;
 }
 
 async function voltarParaModal() {
@@ -120,7 +121,7 @@ async function voltarParaModal() {
 }
 
 async function processarPerfil(botao) {
-  if (parar) return;
+  if (parar) return false;
 
   const item = botao.closest('div[role="dialog"] li');
   let nomePerfil = item
@@ -130,7 +131,7 @@ async function processarPerfil(botao) {
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
-    return;
+    return false;
   }
 
   perfisSeguidos.add(nomePerfil);
@@ -138,21 +139,28 @@ async function processarPerfil(botao) {
   botao.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
-  nomePerfil = document.querySelector('h2, header a')?.innerText || nomePerfil;
-  if (nomePerfil) {
-    log(`➡️ Visitando: ${nomePerfil}`);
-  } else {
+  nomePerfil = document.querySelector('header a, h2')?.innerText || 'desconhecido';
+  if (nomePerfil === 'desconhecido') {
     log('⚠️ Nome do perfil não encontrado');
   }
+  log(`🔍 Visitando: ${nomePerfil}`);
 
-  const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
-  await clicarBotaoSeguir(seguirBtn);
+  await esperar(2000);
+  const seguirBtn = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText === 'Seguir');
+  if (!seguirBtn) {
+    log("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
+    await voltarParaModal();
+    return false;
+  }
+
+  const seguiu = await clicarBotaoSeguir(seguirBtn);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   const curtidas = await curtirFotos();
-  log(`❤️ ${nomePerfil}: curtiu ${curtidas} foto(s)`);
+  log(`❤️ Curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
+  return seguiu;
 }
 
 async function iniciar() {
@@ -166,9 +174,9 @@ async function iniciar() {
   for (const botao of botoes) {
     if (parar || count >= MAX_PERFIS) break;
     const delay = delayAleatorio(MIN_DELAY, MAX_DELAY);
-    await processarPerfil(botao);
-    count++;
-    await esperarComContador(delay);
+    const seguiu = await processarPerfil(botao);
+    if (seguiu) count++;
+    await esperarComContador(Math.ceil(delay / 1000));
   }
   log('✅ Fim da automação');
 }
@@ -177,7 +185,7 @@ chrome.runtime.onMessage.addListener((request) => {
   if (request.type === 'config') {
     if (window.recomendoBotRunning) return;
     parar = false;
-    contadorRodando = false;
+    contadorAtivo = false;
     MAX_PERFIS = request.data.maxPerfis;
     MAX_CURTIDAS = request.data.maxCurtidas;
     MIN_DELAY = request.data.minDelay * 1000;
