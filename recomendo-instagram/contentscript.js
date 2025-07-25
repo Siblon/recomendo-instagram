@@ -15,6 +15,22 @@ const logBox = document.createElement('div');
 const perfisSeguidos = new Set();
 
 // === INTERFACE ===
+
+let contadorAtivo = false;
+
+async function esperarComContador(segundos) {
+  if (contadorAtivo || stopBot) return;
+  contadorAtivo = true;
+
+  for (let i = segundos; i > 0; i--) {
+    if (stopBot) break;
+    console.log(`⏳ Próxima ação em: ${i}s`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  contadorAtivo = false;
+}
+
 function criarPainel() {
   logBox.style = `
     position: fixed;
@@ -72,7 +88,7 @@ function delayAleatorio(min, max) {
 async function clicarBotaoSeguir(botao) {
   if (!botao || botao.innerText.trim() !== 'Seguir') return false;
   botao.click();
-  await esperar(1000);
+  await esperar(3000);
   if (botao.innerText.trim() === 'Seguir' || botao.innerText.trim() === 'Solicitado') {
     return false;
   }
@@ -82,14 +98,14 @@ async function clicarBotaoSeguir(botao) {
 
 async function curtirFotos(qtd) {
   try {
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
     const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
     let count = 0;
     for (const btn of botoesLike) {
       if (parar || count >= qtd) break;
       btn.parentElement?.click();
       count++;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     log(`❤️ Curtiu ${count} foto(s)`);
     return count;
