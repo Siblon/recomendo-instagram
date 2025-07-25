@@ -138,13 +138,18 @@ async function voltarParaModal() {
 async function processarPerfil(botao) {
   if (parar) return;
 
-  const item = botao.closest('li');
-  if (!item || !item.closest(SELECTOR_MODAL)) {
+  const modal = getFollowerModal();
+  const item =
+    botao.closest(`${SELECTOR_MODAL} div[role="button"]`)?.parentElement
+      ?.parentElement || botao.closest('div');
+
+  if (!item || !modal || !item.closest(SELECTOR_MODAL)) {
     log('⚠️ Item do perfil não encontrado no modal. Pulando.');
     return;
   }
-  const linkPerfil = select('a', item);
-  const nomePerfil = linkPerfil?.getAttribute('href')?.split('/')?.[3];
+
+  const linkPerfil = item?.querySelector('a[href*="/"]');
+  const nomePerfil = linkPerfil?.href?.split('/')?.filter(Boolean)?.pop();
 
   if (!nomePerfil) {
     log('⚠️ Nome do perfil não identificado. Pulando.');
