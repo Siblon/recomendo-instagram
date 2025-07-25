@@ -100,20 +100,25 @@ async function clicarBotaoSeguir(botao) {
 
 async function curtirFotos(qtd) {
   try {
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Scroll forçado para carregar as fotos
+    window.scrollTo({ top: 500, behavior: 'smooth' });
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    window.scrollTo({ top: 1000, behavior: 'smooth' });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
     let count = 0;
+
     for (const btn of botoesLike) {
-      if (parar || count >= qtd) break;
+      if (count >= qtd) break;
       btn.parentElement?.click();
       count++;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    log(`❤️ Curtiu ${count} foto(s)`);
-    return count;
+
+    console.log(`❤️ Curtiu ${count} foto(s)`);
   } catch (e) {
-    console.warn('Erro ao tentar curtir fotos', e);
-    return 0;
+    console.warn("❌ Erro ao tentar curtir fotos", e);
   }
 }
 
