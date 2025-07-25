@@ -12,9 +12,9 @@ if (window.recomendoBotRunning) {
   console.warn('Bot já em execução');
 }
 const logBox = document.createElement('div');
-const logMessages = document.createElement('div');
-const contadorEl = document.createElement('div');
-const progressoEl = document.createElement('div');
+  const logMessages = document.createElement('div');
+  const contadorEl = document.createElement('div');
+  const progressoEl = document.createElement('div');
 const perfisSeguidos = new Set();
 let perfisSeguidosCount = 0;
 
@@ -37,11 +37,23 @@ function criarPainel() {
   `;
   logMessages.style = 'max-height: 160px; overflow-y: auto; white-space: pre-wrap;';
   contadorEl.style = 'margin-top:4px; font-weight:bold;';
-  progressoEl.style = 'margin-top:4px; font-weight:bold;';
+  progressoEl.id = 'progresso';
+  progressoEl.style = `
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: #000;
+    color: lime;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 5px;
+    z-index: 999999;
+  `;
   logBox.appendChild(logMessages);
-  logBox.appendChild(progressoEl);
   logBox.appendChild(contadorEl);
   document.body.appendChild(logBox);
+  document.body.appendChild(progressoEl);
   log('✅ Iniciando automação...');
   atualizarProgresso();
   addBotaoParar();
@@ -131,11 +143,19 @@ async function curtirFotos(qtd) {
   }
 }
 
+async function scrollModal() {
+  const modal = document.querySelector('div[role="dialog"] .isgrP') ||
+                document.querySelector('div[role="dialog"]');
+  if (modal) {
+    modal.scrollBy({ top: 200, behavior: 'smooth' });
+    await esperar(500);
+  }
+}
+
 async function voltarParaModal() {
   history.back();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-  const modal = document.querySelector('div[role="dialog"]');
-  modal?.scrollBy(0, 200);
+  await scrollModal();
   log('⬅️ Voltou para lista de seguidores');
 }
 
@@ -147,8 +167,7 @@ async function processarPerfil(botao) {
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: ${nomePerfil}`);
-    const modal = document.querySelector('div[role="dialog"]');
-    modal?.scrollBy(0, 200);
+    await scrollModal();
     return false;
   }
 
@@ -176,7 +195,7 @@ async function processarPerfil(botao) {
   if (!botaoSeguir) {
     console.warn("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
     log("⚠️ Nenhum botão 'Seguir' encontrado. Pulando perfil.");
-    await voltarParaModal();
+    await scrollModal();
     return false;
   }
 
