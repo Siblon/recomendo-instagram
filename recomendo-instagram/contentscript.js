@@ -8,6 +8,9 @@ let MAX_CURTIDAS = 4; // Configurável entre 0 e 4
 let MAX_PERFIS = Infinity; // Número máximo de perfis a seguir
 // === VARIÁVEIS ===
 let parar = false;
+if (window.recomendoBotRunning) {
+  console.warn('Bot já em execução');
+}
 const logBox = document.createElement('div');
 const perfisSeguidos = new Set();
 
@@ -81,12 +84,15 @@ async function curtirFotos() {
       console.warn('Nenhuma foto encontrada para curtir');
       return 0;
     }
-    const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (MAX_CURTIDAS + 1)));
+
+    let fotosCurtidas = Math.floor(Math.random() * (MAX_CURTIDAS + 1));
+    if (MAX_CURTIDAS > 0 && fotosCurtidas === 0) fotosCurtidas = 1;
+    fotosCurtidas = Math.min(links.length, fotosCurtidas);
     for (let i = 0; i < fotosCurtidas; i++) {
       if (parar) return i;
       links[i].click();
       await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-      const botoesLike = document.querySelectorAll('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+      const botoesLike = document.querySelectorAll('article svg[aria-label="Curtir"], article svg[aria-label="Like"]');
       await esperar(500); // tempo para carregar icones
       if (botoesLike.length && botoesLike[0].closest('button')) {
         botoesLike[0].closest('button').click();
@@ -169,10 +175,16 @@ async function iniciar() {
 
 chrome.runtime.onMessage.addListener((request) => {
   if (request.type === 'config') {
+    if (window.recomendoBotRunning) return;
+    parar = false;
+    contadorRodando = false;
     MAX_PERFIS = request.data.maxPerfis;
     MAX_CURTIDAS = request.data.maxCurtidas;
     MIN_DELAY = request.data.minDelay * 1000;
     MAX_DELAY = request.data.maxDelay * 1000;
-    iniciar();
+    window.recomendoBotRunning = true;
+    iniciar().finally(() => {
+      window.recomendoBotRunning = false;
+    });
   }
 });
