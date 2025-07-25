@@ -68,16 +68,20 @@ function log(msg) {
 }
 
 // === FUNÇÕES ===
-async function esperar(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const select = (selector, parent = document) => parent.querySelector(selector);
+
+const SELECTOR_MODAL = 'div[role="dialog"]';
+
+const getFollowerModal = () => select(SELECTOR_MODAL);
 
 function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function scrollModal(modal = document.querySelector('div[role="dialog"]')) {
-  const container = modal?.querySelector('.isgrP') || modal;
+function scrollModal(modal = getFollowerModal()) {
+  const container = select('.isgrP', modal) || modal;
   container?.scrollBy({ top: 200, behavior: 'smooth' });
 }
 
@@ -96,23 +100,23 @@ async function clicarBotaoSeguir(botao, perfil) {
 }
 
 async function curtirFotos() {
-  const links = [...document.querySelectorAll('article a')].filter(a => a.href.includes('/p/'));
+  const links = [...document.querySelectorAll('article a')].filter((a) => a.href.includes('/p/'));
   const fotosCurtidas = Math.min(
     links.length,
     Math.floor(Math.random() * (config.maxCurtidas + 1))
   );
   for (let i = 0; i < fotosCurtidas; i++) {
     if (parar) return 0;
-    links[i].click();
-    await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-    const botaoLike = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
-    if (botaoLike && botaoLike.closest('button')) {
-      botaoLike.closest('button').click();
+    try {
+      links[i].click();
+      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+      const botaoLike = select('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+      botaoLike?.closest('button')?.click();
+      const botaoFechar = select('svg[aria-label="Fechar"]');
+      botaoFechar?.closest('button')?.click();
       log('❤️ Curtiu 1 foto');
-    }
-    const botaoFechar = document.querySelector('svg[aria-label="Fechar"]');
-    if (botaoFechar && botaoFechar.closest('button')) {
-      botaoFechar.closest('button').click();
+    } catch (err) {
+      log('⚠️ Erro ao curtir foto');
     }
     await esperar(DELAY_CURTIDA);
   }
@@ -128,8 +132,8 @@ async function voltarParaModal() {
 async function processarPerfil(botao) {
   if (parar) return;
 
-  const item = botao.closest('div[role="dialog"] li');
-  const linkPerfil = item?.querySelector('a');
+  const item = botao.closest(`${SELECTOR_MODAL} li`);
+  const linkPerfil = select('a', item);
   const nomePerfil = linkPerfil?.getAttribute('href')?.split('/')?.[3];
 
   if (!nomePerfil) {
@@ -160,7 +164,7 @@ async function processarPerfil(botao) {
 
   log(`➡️ Visitando: @${nomePerfil}`);
 
-  const seguirBtn = [...document.querySelectorAll('button')].find(btn => btn.innerText.toLowerCase() === 'seguir');
+  const seguirBtn = [...document.querySelectorAll('button')].find((btn) => btn.innerText.toLowerCase() === 'seguir');
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
@@ -173,18 +177,18 @@ async function processarPerfil(botao) {
 
 async function iniciar() {
   criarPainel();
-  let modal = document.querySelector('div[role="dialog"]');
+  let modal = getFollowerModal();
 
   if (!modal) return log('⚠️ Modal de seguidores não encontrado');
 
   let processados = 0;
   while (!parar && processados < config.maxPerfis) {
-    modal = document.querySelector('div[role="dialog"]');
+    modal = getFollowerModal();
     if (!modal) {
       log('⚠️ Modal de seguidores não encontrado');
       break;
     }
-    const botoesSeguir = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
+    const botoesSeguir = [...modal.querySelectorAll('button')].filter((btn) => btn.innerText.toLowerCase() === 'seguir');
 
     if (botoesSeguir.length === 0) {
       log('⚠️ Nenhum botão "Seguir" restante');
