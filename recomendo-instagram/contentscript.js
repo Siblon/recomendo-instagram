@@ -76,24 +76,32 @@ const SELECTOR_MODAL = 'div[role="dialog"]';
 
 const getFollowerModal = () => select(SELECTOR_MODAL);
 
+function getScrollableContainer(modal) {
+  if (!modal) return null;
+  const elements = [modal, ...modal.querySelectorAll('*')];
+  for (const el of elements) {
+    const style = getComputedStyle(el);
+    if (
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      el.scrollHeight > el.clientHeight
+    ) {
+      return el;
+    }
+  }
+  return modal;
+}
+
 function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 async function scrollModal(modal = getFollowerModal()) {
   if (!modal) return;
-  const container =
-    select('.isgrP', modal) ||
-    // fallback to any child with vertical overflow
-    select('[style*="overflow-y"]', modal) ||
-    modal;
+  const container = getScrollableContainer(modal);
   let previous = modal.querySelectorAll('button').length;
   let attempts = 0;
   do {
-    const distance =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
-    const amount = distance > 0 ? distance : container.clientHeight;
-    container.scrollBy({ top: amount, behavior: 'smooth' });
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     await esperar(delayAleatorio(1000, 6000));
     attempts++;
   } while (

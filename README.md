@@ -6,7 +6,8 @@ This repository contains a small Chrome extension used for automating interactio
 
 1. Load the `recomendo-instagram` directory as an unpacked extension in Chrome.
 2. Open Instagram and click the extension icon.
-3. In the popup, click **Iniciar Bot** to run the automation.
+3. Navegue até o perfil desejado e clique em **seguidores** (ou **seguindo**) para abrir o modal de listas.
+4. Com o modal de seguidores visível, clique em **Iniciar Bot** na popup para iniciar a automação.
 
 The extension logs actions directly on the page and provides a button to stop the automation at any time.
 
