@@ -4,6 +4,8 @@ const MAX_DELAY = 300000; // 5 minutos
 const DELAY_CURTIDA = 3000; // Delay entre curtidas
 const TEMPO_ESPERA_ENTRE_ACOES = 7000; // Delay entre seguir e curtir, etc.
 const MAX_CURTIDAS = 4; // Configurável entre 0 e 4
+const DELAY_SCROLL_MIN = 5000; // Tempo mínimo de espera após scroll no modal
+const DELAY_SCROLL_MAX = 8000; // Tempo máximo de espera após scroll no modal
 
 const DEFAULT_CONFIG = {
   maxPerfis: Infinity,
@@ -104,7 +106,7 @@ async function scrollModal(modal = getFollowerModal()) {
     top: start + container.clientHeight,
     behavior: 'smooth',
   });
-  await esperar(delayAleatorio(1000, 2000));
+  await esperar(delayAleatorio(DELAY_SCROLL_MIN, DELAY_SCROLL_MAX));
 }
 
 async function clicarBotaoSeguir(botao, perfil) {
