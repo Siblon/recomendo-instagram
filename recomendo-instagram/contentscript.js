@@ -149,52 +149,49 @@ async function curtirFotos() {
 
 async function processarPerfil(botao) {
   const item = botao.closest('li') || botao.closest('div');
-  const nome = item?.querySelector('a')?.href.split('/')[3];
+  const link = item?.querySelector('a');
+  const nome = link?.href.split('/')[3];
   if (!nome || perfisSeguidos.has(nome)) return false;
   perfisSeguidos.add(nome);
 
-  botao.click();
+  link.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
   log(`➡️ Visitando: @${nome}`);
 
-  const btnSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
+  const btnSeguir = [...document.querySelectorAll('button')]
+    .find(b => /seguir|follow/i.test(b.innerText));
   if (btnSeguir) {
     btnSeguir.click();
-await esperar(4000); // Espera extra para garantir que o botão mude
+    await esperar(4000); // Espera extra para garantir que o botão mude
 
-let tentativas = 0;
-let txt = btnSeguir.innerText.toLowerCase();
+    let tentativas = 0;
+    let txt = btnSeguir.innerText.toLowerCase();
 
-while (
-  !txt.includes('seguindo') &&
-  !txt.includes('solicitado') &&
-  !txt.includes('following') &&
-  !txt.includes('requested') &&
-  tentativas < 6
-) {
-  await esperar(1000); // Verifica a cada segundo
-  txt = btnSeguir.innerText.toLowerCase();
-  tentativas++;
-}
+    while (
+      !txt.includes('seguindo') &&
+      !txt.includes('solicitado') &&
+      !txt.includes('following') &&
+      !txt.includes('requested') &&
+      tentativas < 6
+    ) {
+      await esperar(1000); // Verifica a cada segundo
+      txt = btnSeguir.innerText.toLowerCase();
+      tentativas++;
+    }
 
-if (
-  txt.includes('seguindo') ||
-  txt.includes('solicitado') ||
-  txt.includes('following') ||
-  txt.includes('requested')
-) {
-  registrarSucessoSeguir();
-} else {
-  registrarFalhaSeguir();
-}
-
-
-    if (txt.includes('seguindo') || txt.includes('solicitado') || txt.includes('following') || txt.includes('requested')) {
+    if (
+      txt.includes('seguindo') ||
+      txt.includes('solicitado') ||
+      txt.includes('following') ||
+      txt.includes('requested')
+    ) {
       registrarSucessoSeguir();
     } else {
       registrarFalhaSeguir();
     }
+  } else {
+    registrarFalhaSeguir();
   }
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
