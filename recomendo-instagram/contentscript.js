@@ -73,6 +73,29 @@ function pararContagem() {
   countdownDiv.textContent = '';
 }
 
+async function esperarElemento(selector, timeout = 10000) {
+  const inicio = Date.now();
+  while (Date.now() - inicio < timeout) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+    await esperar(500);
+  }
+  return null;
+}
+
+async function voltarAoModal() {
+  for (let tentativas = 0; tentativas < 3; tentativas++) {
+    history.back();
+    const modal = await esperarElemento('div[role="dialog"]', 10000);
+    if (modal) {
+      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+      return modal;
+    }
+  }
+  log('⚠️ Não foi possível voltar ao modal de seguidores');
+  return null;
+}
+
 function registrarSucessoSeguir() {
   totalSeguidos++;
   falhasDeSeguir = 0;
@@ -110,20 +133,19 @@ async function scrollModal(modal) {
 }
 
 async function scrollProfile() {
-  for (let i = 0; i < 10; i++) {
-    if ([...document.querySelectorAll('article a[href*="/p/"]')].length >= config.maxCurtidas) break;
+  for (let i = 0; i < 15; i++) {
+    if (document.querySelector('article a[href*="/p/"]')) break;
     window.scrollBy(0, 400);
-    await esperar(delayAleatorio(1000, 2000));
+    await esperar(delayAleatorio(800, 1600));
   }
 }
 
 async function curtirFotos() {
   const maxCurtidas = Math.floor(Math.random() * (config.maxCurtidas + 1));
-  await esperar(delayAleatorio(3000, 5000));
+  await esperar(delayAleatorio(2000, 4000));
   let posts = [...document.querySelectorAll('article a[href*="/p/"]')];
   if (!posts.length) {
-    window.scrollBy(0, 500);
-    await esperar(delayAleatorio(2000, 4000));
+    await scrollProfile();
     posts = [...document.querySelectorAll('article a[href*="/p/"]')];
   }
   let curtidas = 0;
@@ -156,7 +178,7 @@ async function processarPerfil(botao) {
   if (!nome || perfisSeguidos.has(nome)) return false;
   perfisSeguidos.add(nome);
   link.click();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+  await esperarElemento('header');
   log(`➡️ Visitando: @${nome}`);
   const btnSeguir = [...document.querySelectorAll('button')].find(b => /seguir|follow/i.test(b.innerText));
   if (btnSeguir) {
@@ -173,8 +195,7 @@ async function processarPerfil(botao) {
   await scrollProfile();
   const curtidas = await curtirFotos();
   log(`❤️ @${nome}: curtiu ${curtidas} foto(s)`);
-  history.back();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+  await voltarAoModal();
   return true;
 }
 
