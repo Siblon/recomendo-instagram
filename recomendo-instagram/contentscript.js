@@ -179,35 +179,33 @@ function extrairNomeDoPerfil(botao) {
   if (!item) return { item: null, link: null, nome: null };
 
   let linkPerfil = null;
+  let nome = null;
+
   const anchors = [...item.querySelectorAll('a[href]')];
 
   for (const a of anchors) {
-    const href = a.getAttribute('href') || a.href;
+    const href = a.getAttribute('href');
     if (!href) continue;
-    if (href.startsWith('/') || href.includes('instagram.com')) {
-      linkPerfil = a;
-      break; // garante ordem de cima para baixo
-    }
-  }
-
-  let nome = null;
-
-  if (linkPerfil) {
-    const hrefCompleto = linkPerfil.getAttribute('href') || linkPerfil.href;
-    if (!hrefCompleto) {
-      log('⚠️ Link do perfil sem href');
-    } else {
-      const hrefSemQuery = hrefCompleto.split('?')[0];
-      const partes = hrefSemQuery.split('/').filter(Boolean);
-      nome = partes[partes.length - 1] || null;
-    }
+    // procura algo que pareça um link para perfil
+    const match = href.match(/(?:https?:\/\/[^/]+)?\/(.*?)\/?$/);
+    if (!match) continue;
+    const candidate = match[1];
+    if (!candidate || candidate.includes('explore') || candidate.includes('direct')) continue;
+    linkPerfil = a;
+    nome = candidate;
+    break;
   }
 
   if (!nome) {
-    const possivelNome = item.querySelector('span, strong');
-    const altName = possivelNome?.textContent?.trim();
-    if (altName && altName.toLowerCase() !== 'seguir') {
-      nome = altName;
+    const spans = [...item.querySelectorAll('span, strong')].filter((el) => {
+      if (el.closest('button')) return false;
+      const texto = el.textContent.trim();
+      if (!texto) return false;
+      if (/^seguir$/i.test(texto)) return false;
+      return el.offsetParent !== null;
+    });
+    if (spans.length > 0) {
+      nome = spans[0].textContent.trim().replace(/^@/, '').split(/\s/)[0];
     }
   }
 
