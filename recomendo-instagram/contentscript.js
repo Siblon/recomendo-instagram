@@ -55,8 +55,47 @@ function log(msg) {
   try { chrome.runtime.sendMessage({ tipo: 'log', msg }); } catch (_) {}
 }
 
+function registrarSucessoSeguir() {
+  totalSeguidos++;
+  falhasDeSeguir = 0;
+}
+
+function registrarFalhaSeguir() {
+  falhasDeSeguir++;
+  if (falhasDeSeguir >= 3) detectarBloqueio();
+}
+
+function detectarBloqueio() {
+  if (bloqueioSeguirAtivo) return;
+  bloqueioSeguirAtivo = true;
+  horaBloqueio = new Date();
+  log(`⚠️ Limitação de seguir detectada em ${horaBloqueio.toLocaleTimeString()}`);
+  encerrarAutomacao();
+}
+
+function encerrarAutomacao() {
+  if (horaFim) return;
+  horaFim = new Date();
+  const duracaoMin = ((horaFim - horaInicio) / 60000).toFixed(1);
+  log('---- RELATÓRIO ----');
+  log(`Início: ${horaInicio?.toLocaleString()}`);
+  log(`Bloqueio: ${horaBloqueio?.toLocaleString() || 'n/a'}`);
+  log(`Conta: @${contaAlvo || 'desconhecido'}`);
+  log(`Seguidos com sucesso: ${totalSeguidos}`);
+  log(`Duração: ${duracaoMin} min`);
+  log(`Encerramento: ${horaFim.toLocaleString()}`);
+  parar = true;
+}
+
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function delayAleatorio(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+async function scrollModal(modal) {
+  if (!modal) return;
+  const container = modal.querySelector('[style*="overflow"]') || modal;
+  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  await esperar(delayAleatorio(1000, 2000));
+}
 
 async function scrollProfile() {
   const maxScrolls = 10;
@@ -123,6 +162,12 @@ async function processarPerfil(botao) {
   if (btnSeguir) {
     btnSeguir.click();
     await esperar(2000);
+    const txt = btnSeguir.innerText.toLowerCase();
+    if (txt.includes('seguindo') || txt.includes('solicitado') || txt.includes('following') || txt.includes('requested')) {
+      registrarSucessoSeguir();
+    } else {
+      registrarFalhaSeguir();
+    }
   }
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
@@ -136,7 +181,10 @@ async function processarPerfil(botao) {
 }
 
 async function iniciar() {
-  if (!horaInicio) horaInicio = new Date();
+  if (!horaInicio) {
+    horaInicio = new Date();
+    contaAlvo = location.pathname.split('/')[1] || 'desconhecido';
+  }
   criarPainel();
 
   const modal = document.querySelector('div[role="dialog"]');
@@ -164,6 +212,7 @@ async function iniciar() {
     await esperar(delay);
   }
   log('✅ Fim da automação');
+  encerrarAutomacao();
 }
 
 chrome.runtime.onMessage.addListener((request) => {
