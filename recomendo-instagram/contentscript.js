@@ -192,15 +192,19 @@ async function scrollModal(modal = getFollowerModal()) {
   if (!modal) return;
   const container = getScrollableContainer(modal);
   let previous = modal.querySelectorAll('button').length;
-  let attempts = 0;
-  do {
+  let noGrowth = 0;
+
+  while (noGrowth < 3) {
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     await esperar(delayAleatorio(1000, 6000));
-    attempts++;
-  } while (
-    attempts < 3 &&
-    modal.querySelectorAll('button').length <= previous
-  );
+    const atual = modal.querySelectorAll('button').length;
+    if (atual > previous) {
+      previous = atual;
+      noGrowth = 0;
+    } else {
+      noGrowth++;
+    }
+  }
 }
 
 async function scrollProfile() {
@@ -385,10 +389,8 @@ async function processarPerfil(botao) {
 
   const textoBotao = botao.innerText?.toLowerCase();
 
-  if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
-    log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
-    await scrollModal();
-    return false;
+  if (textoBotao !== 'seguir') {
+    log(`ℹ️ Botão no modal indica "${botao.innerText.trim()}" para @${nomePerfil}. Verificando mesmo assim.`);
   }
 
   if (perfisSeguidos.has(nomePerfil)) {
