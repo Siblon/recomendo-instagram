@@ -19,6 +19,15 @@ let iniciado = false;
 let parar = false;
 const logBox = document.createElement('div');
 const perfisSeguidos = new Set();
+let falhasDeSeguir = 0;
+let bloqueioSeguirAtivo = false;
+let tentativasDeDesbloqueio = 0;
+let horaInicio = null;
+let horaBloqueio = null;
+let horaFim = null;
+let totalSeguidos = 0;
+let contaAlvo = '';
+let timeoutBloqueio = null;
 
 // === INTERFACE ===
 function criarPainel() {
@@ -77,6 +86,63 @@ function log(msg) {
   try {
     chrome.runtime.sendMessage({ tipo: 'log', msg });
   } catch (_) {}
+}
+
+function registrarSucessoSeguir() {
+  totalSeguidos++;
+  falhasDeSeguir = 0;
+  bloqueioSeguirAtivo = false;
+  tentativasDeDesbloqueio = 0;
+  if (timeoutBloqueio) {
+    clearTimeout(timeoutBloqueio);
+    timeoutBloqueio = null;
+  }
+}
+
+function registrarFalhaSeguir() {
+  falhasDeSeguir++;
+  if (falhasDeSeguir >= 3 && !bloqueioSeguirAtivo) detectarBloqueio();
+}
+
+function detectarBloqueio() {
+  bloqueioSeguirAtivo = true;
+  horaBloqueio = new Date();
+  log('⚠️ Limitação de seguir detectada. Pausando...');
+  parar = true;
+  agendarNovaTentativa();
+}
+
+function agendarNovaTentativa() {
+  tentativasDeDesbloqueio++;
+  let delay;
+  if (tentativasDeDesbloqueio === 1) {
+    delay = delayAleatorio(3600000, 7200000);
+  } else if (tentativasDeDesbloqueio === 2) {
+    delay = 6 * 3600000;
+  } else {
+    log('❌ Limitação persistente. Encerrando automação.');
+    encerrarAutomacao();
+    return;
+  }
+  log(`⏸️ Próxima tentativa em ${(delay / 3600000).toFixed(1)}h`);
+  timeoutBloqueio = setTimeout(() => {
+    parar = false;
+    bloqueioSeguirAtivo = false;
+    falhasDeSeguir = 0;
+    iniciar();
+  }, delay);
+}
+
+function encerrarAutomacao() {
+  horaFim = new Date();
+  const duracaoMin = ((horaFim - horaInicio) / 60000).toFixed(1);
+  log('---- RELATÓRIO ----');
+  log(`Início: ${horaInicio?.toLocaleString()}`);
+  log(`Conta: @${contaAlvo || 'desconhecido'}`);
+  log(`Seguidos com sucesso: ${totalSeguidos}`);
+  log(`Duração: ${duracaoMin} min`);
+  log(`Encerramento: ${horaFim.toLocaleString()}`);
+  parar = true;
 }
 
 // === FUNÇÕES ===
@@ -140,8 +206,16 @@ async function clicarBotaoSeguir(botao, perfil) {
   const texto = botao.innerText.toLowerCase();
   if (texto === 'seguir') {
     botao.click();
-    log(`👤 Seguiu @${perfil}`);
-    return true;
+    await esperar(2000);
+    const novoTexto = botao.innerText.toLowerCase();
+    if (novoTexto === 'seguindo' || novoTexto === 'solicitado') {
+      log(`👤 Seguiu @${perfil}`);
+      registrarSucessoSeguir();
+      return true;
+    }
+    log(`⚠️ Falha ao seguir @${perfil}`);
+    registrarFalhaSeguir();
+    return false;
   }
   if (texto === 'solicitado' || texto === 'seguindo') {
     log(`ℹ️ Já segue @${perfil}`);
@@ -278,6 +352,10 @@ async function processarPerfil(botao) {
 
   const seguirBtn = [...document.querySelectorAll('button')].find((btn) => btn.innerText.toLowerCase() === 'seguir');
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
+  if (bloqueioSeguirAtivo) {
+    await voltarParaModal();
+    return false;
+  }
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   await scrollProfile();
@@ -291,6 +369,10 @@ async function processarPerfil(botao) {
 }
 
 async function iniciar() {
+  if (!horaInicio) {
+    horaInicio = new Date();
+    contaAlvo = location.pathname.split('/')[1] || 'desconhecido';
+  }
   criarPainel();
   let modal = getFollowerModal();
 
