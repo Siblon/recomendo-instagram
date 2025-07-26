@@ -16,6 +16,8 @@ let config = { ...DEFAULT_CONFIG };
 let iniciado = false;
 let parar = false;
 const logBox = document.createElement('div');
+const countdownDiv = document.createElement('div');
+let countdownInterval = null;
 const perfisSeguidos = new Set();
 let falhasDeSeguir = 0;
 let bloqueioSeguirAtivo = false;
@@ -29,6 +31,9 @@ let contaAlvo = '';
 function criarPainel() {
   logBox.style = `position: fixed; bottom: 10px; right: 10px; background: #000; color: lime; font-family: monospace; font-size: 13px; padding: 10px; max-height: 200px; width: 240px; overflow-y: auto; z-index: 9999; box-shadow: 0 0 6px rgba(0,0,0,0.5);`;
   document.body.appendChild(logBox);
+  countdownDiv.style = `position: fixed; bottom: 60px; left: 10px; background: #000; color: lime; font-family: monospace; padding: 4px 6px; z-index: 9999;`;
+  countdownDiv.textContent = '';
+  document.body.appendChild(countdownDiv);
   log('✅ Iniciando automação...');
   const btn = document.createElement('button');
   btn.innerText = 'PARAR';
@@ -48,6 +53,25 @@ function log(msg) {
 
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 function delayAleatorio(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function iniciarContagem(segundos) {
+  clearInterval(countdownInterval);
+  countdownDiv.textContent = `⏳ ${segundos}s`;
+  countdownInterval = setInterval(() => {
+    segundos--;
+    if (segundos <= 0) {
+      clearInterval(countdownInterval);
+      countdownDiv.textContent = '';
+    } else {
+      countdownDiv.textContent = `⏳ ${segundos}s`;
+    }
+  }, 1000);
+}
+
+function pararContagem() {
+  clearInterval(countdownInterval);
+  countdownDiv.textContent = '';
+}
 
 function registrarSucessoSeguir() {
   totalSeguidos++;
@@ -76,6 +100,7 @@ function encerrarAutomacao() {
   log(`Duração: ${duracaoMin} min`);
   log(`Encerramento: ${horaFim.toLocaleString()}`);
   parar = true;
+  pararContagem();
 }
 
 async function scrollModal(modal) {
@@ -175,8 +200,11 @@ async function iniciar() {
     }
     processados++;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
-    log(`⏳ Aguardando ${(delay / 1000).toFixed(0)}s para o próximo...`);
+    const segundos = Math.round(delay / 1000);
+    log(`⏳ Aguardando ${segundos}s para o próximo...`);
+    iniciarContagem(segundos);
     await esperar(delay);
+    pararContagem();
   }
   log('✅ Fim da automação');
   encerrarAutomacao();
