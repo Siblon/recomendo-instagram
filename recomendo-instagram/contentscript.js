@@ -216,6 +216,16 @@ async function scrollProfile() {
   } while (iterations < 3);
 }
 
+async function waitForPosts(timeout = 5000) {
+  let start = Date.now();
+  while (Date.now() - start < timeout) {
+    const posts = document.querySelectorAll('article a[href*="/p/"]');
+    if (posts.length > 0) return posts;
+    await esperar(500);
+  }
+  return [];
+}
+
 async function clicarBotaoSeguir(botao, perfil) {
   if (!botao) return false;
   const texto = botao.innerText.toLowerCase();
@@ -240,27 +250,50 @@ async function clicarBotaoSeguir(botao, perfil) {
 
 async function curtirFotos() {
   const maxCurtidas = Math.floor(Math.random() * (config.maxCurtidas + 1));
+  await esperar(delayAleatorio(3000, 5000));
+  let posts = await waitForPosts();
+  if (posts.length === 0) {
+    window.scrollBy(0, 500);
+    await esperar(delayAleatorio(2000, 4000));
+    posts = await waitForPosts();
+  }
+
   let curtidas = 0;
-  while (curtidas < maxCurtidas) {
-    const links = [...document.querySelectorAll('article a')].filter((a) =>
-      a.href.includes('/p/')
-    );
-    if (curtidas >= links.length) break;
+  for (const post of posts) {
+    if (curtidas >= maxCurtidas) break;
     if (parar) return curtidas;
+
+    const urlPost = post.href;
     try {
-      links[curtidas].click();
-      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-      const botaoLike = select('svg[aria-label="Curtir"], svg[aria-label="Like"]');
-      botaoLike?.closest('button')?.click();
-      const botaoFechar = select('svg[aria-label="Fechar"]');
-      botaoFechar?.closest('button')?.click();
-      log('❤️ Curtiu 1 foto');
-    } catch (err) {
+      post.click();
+
+      let likeSvg = null;
+      let attempts = 0;
+      do {
+        likeSvg = select('svg[aria-label="Curtir"], svg[aria-label="Descurtir"]');
+        if (!likeSvg) await esperar(500);
+        attempts++;
+      } while (!likeSvg && attempts < 20);
+
+      if (likeSvg?.getAttribute('aria-label') === 'Curtir') {
+        likeSvg.closest('button')?.click();
+        log(`❤️ ${urlPost} - ${new Date().toLocaleTimeString()}`);
+      }
+
+      const fechar = select('[aria-label="Fechar"]');
+      if (fechar) {
+        fechar.click();
+      } else {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      }
+    } catch (_) {
       log('⚠️ Erro ao curtir foto');
     }
+
     curtidas++;
     await esperar(DELAY_CURTIDA);
   }
+
   return curtidas;
 }
 
