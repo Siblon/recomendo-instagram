@@ -204,7 +204,23 @@ function extrairNomeDoPerfil(botao) {
   }
 
   if (!nome) {
-    const altName = item.innerText?.split('\n')[0]?.trim();
+  let nome = null;
+  const item = botao.closest('li') || botao.closest('div');
+  const link = item?.querySelector('a');
+  if (link && link.href) {
+  nome = link.href.split('/')[3];
+} else {
+  // Busca o nome do usuário (username) diretamente do primeiro strong ou span visível
+  const possivelNome = item?.querySelector('span, strong');
+  if (possivelNome && possivelNome.textContent) {
+    nome = possivelNome.textContent.trim();
+  }
+}
+
+if (!nome || nome.toLowerCase() === 'seguir') {
+  log('⚠️ Nome do perfil não identificado. Pulando.');
+  return false;
+}
     if (altName) {
       nome = altName;
     } else if (!linkPerfil) {
