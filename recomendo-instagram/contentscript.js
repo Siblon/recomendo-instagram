@@ -98,6 +98,12 @@ function delayAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function isBotaoSeguir(btn) {
+  if (!btn || !btn.innerText) return false;
+  const texto = btn.innerText.trim().toLowerCase();
+  return texto.includes('seguir') || texto.includes('follow');
+}
+
 async function scrollModal(modal = getFollowerModal()) {
   if (!modal) return;
   const container = getScrollableContainer(modal);
@@ -111,8 +117,8 @@ async function scrollModal(modal = getFollowerModal()) {
 
 async function clicarBotaoSeguir(botao, perfil) {
   if (!botao) return false;
-  const texto = botao.innerText.toLowerCase();
-  if (texto === 'seguir') {
+  const texto = botao.innerText.trim().toLowerCase();
+  if (isBotaoSeguir(botao)) {
     botao.click();
     log(`👤 Seguiu @${perfil}`);
     return true;
@@ -212,9 +218,7 @@ function extrairNomeDoPerfil(botao) {
 }
 
 function obterProximoBotao(modal) {
-  const botoesSeguir = [...modal.querySelectorAll('button')].filter(
-    (btn) => btn.innerText.toLowerCase() === 'seguir'
-  );
+  const botoesSeguir = [...modal.querySelectorAll('button')].filter(isBotaoSeguir);
   if (botoesSeguir.length === 0) return null;
   if (!ultimoItemProcessado) return botoesSeguir[0];
   for (const btn of botoesSeguir) {
@@ -246,16 +250,19 @@ async function processarPerfil(botao) {
     return false;
   }
 
-  const textoBotao = botao.innerText?.toLowerCase();
+  const textoBotao = botao.innerText?.trim().toLowerCase();
 
-  if (textoBotao === 'seguindo' || textoBotao === 'solicitado') {
+  if (textoBotao.includes('seguindo') || textoBotao.includes('solicitado')) {
     log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
+    perfisSeguidos.add(nomePerfil);
+    ultimoItemProcessado = item;
     await scrollModal();
     return false;
   }
 
   if (perfisSeguidos.has(nomePerfil)) {
     log(`⚠️ Perfil já processado: @${nomePerfil}`);
+    ultimoItemProcessado = item;
     await scrollModal();
     return false;
   }
@@ -267,7 +274,7 @@ async function processarPerfil(botao) {
 
   log(`➡️ Visitando: @${nomePerfil}`);
 
-  const seguirBtn = [...document.querySelectorAll('button')].find((btn) => btn.innerText.toLowerCase() === 'seguir');
+  const seguirBtn = [...document.querySelectorAll('button')].find(isBotaoSeguir);
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
