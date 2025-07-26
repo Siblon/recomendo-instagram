@@ -11,4 +11,8 @@ This repository contains a small Chrome extension used for automating interactio
 
 The extension logs actions directly on the page and provides a button to stop the automation at any time.
 
+When visiting a profile the bot now scrolls the page a few times before liking
+posts. This ensures that enough posts are loaded in cases where Instagram uses
+lazy loading.
+
 Use responsibly and at your own risk.

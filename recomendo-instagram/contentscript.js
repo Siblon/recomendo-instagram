@@ -110,6 +110,19 @@ async function scrollModal(modal = getFollowerModal()) {
   );
 }
 
+async function scrollProfile() {
+  let iterations = 0;
+  do {
+    window.scrollTo(0, document.body.scrollHeight);
+    await esperar(delayAleatorio(500, 1500));
+    const posts = [...document.querySelectorAll('article a')].filter((a) =>
+      a.href.includes('/p/')
+    );
+    if (posts.length >= config.maxCurtidas) break;
+    iterations++;
+  } while (iterations < 3);
+}
+
 async function clicarBotaoSeguir(botao, perfil) {
   if (!botao) return false;
   const texto = botao.innerText.toLowerCase();
@@ -125,15 +138,16 @@ async function clicarBotaoSeguir(botao, perfil) {
 }
 
 async function curtirFotos() {
-  const links = [...document.querySelectorAll('article a')].filter((a) => a.href.includes('/p/'));
-  const fotosCurtidas = Math.min(
-    links.length,
-    Math.floor(Math.random() * (config.maxCurtidas + 1))
-  );
-  for (let i = 0; i < fotosCurtidas; i++) {
-    if (parar) return 0;
+  const maxCurtidas = Math.floor(Math.random() * (config.maxCurtidas + 1));
+  let curtidas = 0;
+  while (curtidas < maxCurtidas) {
+    const links = [...document.querySelectorAll('article a')].filter((a) =>
+      a.href.includes('/p/')
+    );
+    if (curtidas >= links.length) break;
+    if (parar) return curtidas;
     try {
-      links[i].click();
+      links[curtidas].click();
       await esperar(TEMPO_ESPERA_ENTRE_ACOES);
       const botaoLike = select('svg[aria-label="Curtir"], svg[aria-label="Like"]');
       botaoLike?.closest('button')?.click();
@@ -143,9 +157,10 @@ async function curtirFotos() {
     } catch (err) {
       log('⚠️ Erro ao curtir foto');
     }
+    curtidas++;
     await esperar(DELAY_CURTIDA);
   }
-  return fotosCurtidas;
+  return curtidas;
 }
 
 async function voltarParaModal() {
@@ -253,6 +268,7 @@ async function processarPerfil(botao) {
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
+  await scrollProfile();
   const curtidas = await curtirFotos();
   log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
