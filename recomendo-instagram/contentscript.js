@@ -2,6 +2,7 @@
 
 let stopBot = false;
 let perfisSeguidos = new Set();
+let isBotRunning = false;
 
 const log = (msg, tipo = 'info') => {
   const prefixo = `[${new Date().toLocaleTimeString()}]`;
@@ -48,6 +49,8 @@ const visitarPerfil = (link) => {
 };
 
 const iniciarBot = async () => {
+  if (isBotRunning) return;
+  isBotRunning = true;
   stopBot = false;
   log('\u2705 Iniciando aut\u00f4mata\u00e7\u00e3o...');
 
@@ -74,8 +77,10 @@ const iniciarBot = async () => {
     const nome = extrairNomeDoPerfil();
     log(`\u{1F465} Visitando: ${nome || 'Desconhecido'}`);
 
-    const botaoSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
-    await clicarSeguir(botaoSeguir);
+  const botaoSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
+  const username = item.querySelector('span')?.innerText;
+  if (username) log(`\u2795 Seguindo @${username}`);
+  await clicarSeguir(botaoSeguir);
 
     await delay(getDelayAleatorio(delayMin, delayMax));
     voltarParaLista();
@@ -83,15 +88,18 @@ const iniciarBot = async () => {
   }
 
   log('\u2705 Finalizado.');
+  isBotRunning = false;
 };
 
 const pararBot = () => {
   stopBot = true;
+  isBotRunning = false;
   log('\u274C Bot parado pelo usu\u00e1rio.', 'erro');
 };
 
 const criarPainel = () => {
   const painel = document.createElement('div');
+  painel.id = 'botPanel';
   painel.style = 'position:fixed;top:10px;right:10px;background:#fff;border:2px solid #000;padding:10px;z-index:9999999;font-family:sans-serif';
   painel.innerHTML = `
     <h3>Recomendo Instagram</h3>
@@ -108,4 +116,6 @@ const criarPainel = () => {
   document.getElementById('stopBot').onclick = pararBot;
 };
 
-criarPainel();
+if (!document.getElementById('botPanel')) {
+  criarPainel();
+}
