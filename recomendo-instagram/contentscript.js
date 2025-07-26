@@ -19,6 +19,7 @@ let iniciado = false;
 let parar = false;
 const logBox = document.createElement('div');
 const perfisSeguidos = new Set();
+let ultimoItemProcessado = null;
 
 // === INTERFACE ===
 function criarPainel() {
@@ -98,16 +99,12 @@ function delayAleatorio(min, max) {
 async function scrollModal(modal = getFollowerModal()) {
   if (!modal) return;
   const container = getScrollableContainer(modal);
-  let previous = modal.querySelectorAll('button').length;
-  let attempts = 0;
-  do {
-    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-    await esperar(delayAleatorio(1000, 6000));
-    attempts++;
-  } while (
-    attempts < 3 &&
-    modal.querySelectorAll('button').length <= previous
-  );
+  const start = container.scrollTop;
+  container.scrollTo({
+    top: start + container.clientHeight,
+    behavior: 'smooth',
+  });
+  await esperar(delayAleatorio(1000, 2000));
 }
 
 async function clicarBotaoSeguir(botao, perfil) {
@@ -212,6 +209,25 @@ function extrairNomeDoPerfil(botao) {
   return { item, link: linkPerfil, nome };
 }
 
+function obterProximoBotao(modal) {
+  const botoesSeguir = [...modal.querySelectorAll('button')].filter(
+    (btn) => btn.innerText.toLowerCase() === 'seguir'
+  );
+  if (botoesSeguir.length === 0) return null;
+  if (!ultimoItemProcessado) return botoesSeguir[0];
+  for (const btn of botoesSeguir) {
+    const item = btn.closest('li') || btn.closest('div');
+    if (
+      item &&
+      (ultimoItemProcessado.compareDocumentPosition(item) &
+        Node.DOCUMENT_POSITION_FOLLOWING)
+    ) {
+      return btn;
+    }
+  }
+  return null;
+}
+
 async function processarPerfil(botao) {
   if (parar) return false;
 
@@ -257,7 +273,14 @@ async function processarPerfil(botao) {
   log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
 
   await voltarParaModal();
-  await scrollModal();
+  ultimoItemProcessado = item;
+  const proximo = item.nextElementSibling;
+  if (proximo) {
+    proximo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    await esperar(delayAleatorio(800, 1500));
+  } else {
+    await scrollModal();
+  }
 
   return true;
 }
@@ -275,20 +298,18 @@ async function iniciar() {
       log('⚠️ Modal de seguidores não encontrado');
       break;
     }
-    const botoesSeguir = [...modal.querySelectorAll('button')].filter((btn) => btn.innerText.toLowerCase() === 'seguir');
-
-    if (botoesSeguir.length === 0) {
-      log('⚠️ Nenhum botão "Seguir" restante');
+    let botao = obterProximoBotao(modal);
+    if (!botao) {
+      log('⚠️ Nenhum botão "Seguir" encontrado. Scrollando...');
       await scrollModal(modal);
-      continue;
+      botao = obterProximoBotao(modal);
+      if (!botao) continue;
     }
 
-    const perfilProcessado = await processarPerfil(botoesSeguir[0]);
+    const perfilProcessado = await processarPerfil(botao);
     if (perfilProcessado) {
       processados++;
     }
-
-    await scrollModal(modal);
 
     if (parar) break;
     const delay = delayAleatorio(config.minDelay, config.maxDelay);
