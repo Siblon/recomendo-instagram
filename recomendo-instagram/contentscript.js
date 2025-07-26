@@ -161,8 +161,22 @@ async function processarPerfil(botao) {
   const btnSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
   if (btnSeguir) {
     btnSeguir.click();
-    await esperar(2000);
-    const txt = btnSeguir.innerText.toLowerCase();
+    await esperar(4000); // aumenta o tempo de resposta
+    let tentativas = 0;
+    let txt = btnSeguir.innerText.toLowerCase();
+
+ while (
+  !txt.includes('seguindo') &&
+  !txt.includes('solicitado') &&
+  !txt.includes('following') &&
+  !txt.includes('requested') &&
+  tentativas < 6
+) {
+  await esperar(1000);
+  txt = btnSeguir.innerText.toLowerCase();
+  tentativas++;
+}
+
     if (txt.includes('seguindo') || txt.includes('solicitado') || txt.includes('following') || txt.includes('requested')) {
       registrarSucessoSeguir();
     } else {
