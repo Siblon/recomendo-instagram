@@ -154,6 +154,21 @@ const SELECTOR_MODAL = 'div[role="dialog"]';
 
 const getFollowerModal = () => select(SELECTOR_MODAL);
 
+function sugestoesDetectadas(modal) {
+  if (!modal) return false;
+  const texto = modal.textContent.toLowerCase();
+  return (
+    texto.includes('sugestões para você') ||
+    texto.includes('sugestoes para voce')
+  );
+}
+
+function estaNaListaDeSeguidores(item, modal) {
+  if (!item || !modal) return false;
+  const container = getScrollableContainer(modal);
+  return container && container.contains(item);
+}
+
 function getScrollableContainer(modal) {
   if (!modal) return null;
   const elements = [modal, ...modal.querySelectorAll('*')];
@@ -324,6 +339,12 @@ async function processarPerfil(botao) {
     return false;
   }
 
+  if (sugestoesDetectadas(modal) || !estaNaListaDeSeguidores(item, modal)) {
+    log('⚠️ Lista de seguidores indisponível. Ignorando sugestões do Instagram.');
+    parar = true;
+    return false;
+  }
+
   if (!nomePerfil) {
     log('⚠️ Nome do perfil não identificado. Pulando.');
     return false;
@@ -383,6 +404,11 @@ async function iniciar() {
     modal = getFollowerModal();
     if (!modal) {
       log('⚠️ Modal de seguidores não encontrado');
+      break;
+    }
+    if (sugestoesDetectadas(modal)) {
+      log('⚠️ Lista de seguidores indisponível. Ignorando sugestões do Instagram.');
+      parar = true;
       break;
     }
     const botoesSeguir = [...modal.querySelectorAll('button')].filter((btn) => btn.innerText.toLowerCase() === 'seguir');
