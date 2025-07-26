@@ -216,7 +216,8 @@ async function iniciar() {
 
   let processados = 0;
   while (!parar && processados < config.maxPerfis) {
-    const botoesSeguir = [...modal.querySelectorAll('button')].filter(btn => btn.innerText.toLowerCase() === 'seguir');
+    const botoesSeguir = [...modal.querySelectorAll('button')]
+      .filter(btn => /seguir|follow/i.test(btn.innerText));
 
     if (botoesSeguir.length === 0) {
       log('⚠️ Nenhum novo perfil visível. Scrollando...');

@@ -1,6 +1,6 @@
 # Recomendo Instagram
 
-This repository contains a small Chrome extension used for automating interactions on Instagram. The extension injects a script that follows profiles and likes photos from the followers modal.
+This repository contains a small Chrome extension used for automating interactions on Instagram. The extension injects a script that follows profiles and likes photos from the followers modal. The follow detection logic recognizes buttons containing "Seguir" or "Follow" to adapt to minor UI changes.
 
 ## Usage
 
