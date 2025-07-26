@@ -153,7 +153,12 @@ async function processarPerfil(botao) {
   if (!nome || perfisSeguidos.has(nome)) return false;
   perfisSeguidos.add(nome);
 
-  botao.click();
+  const linkPerfil = item?.querySelector('a');
+  if (linkPerfil) {
+    linkPerfil.click();
+  } else {
+    botao.click();
+  }
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
 
   log(`➡️ Visitando: @${nome}`);
@@ -178,23 +183,16 @@ while (
   tentativas++;
 }
 
-if (
-  txt.includes('seguindo') ||
-  txt.includes('solicitado') ||
-  txt.includes('following') ||
-  txt.includes('requested')
-) {
-  registrarSucessoSeguir();
-} else {
-  registrarFalhaSeguir();
-}
-
-
-    if (txt.includes('seguindo') || txt.includes('solicitado') || txt.includes('following') || txt.includes('requested')) {
-      registrarSucessoSeguir();
-    } else {
-      registrarFalhaSeguir();
-    }
+  if (
+    txt.includes('seguindo') ||
+    txt.includes('solicitado') ||
+    txt.includes('following') ||
+    txt.includes('requested')
+  ) {
+    registrarSucessoSeguir();
+  } else {
+    registrarFalhaSeguir();
+  }
   }
 
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
