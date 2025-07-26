@@ -87,8 +87,19 @@ async function scrollModal(modal = getFollowerModal()) {
     // fallback to any child with vertical overflow
     select('[style*="overflow-y"]', modal) ||
     modal;
-  container.scrollBy({ top: 200, behavior: 'smooth' });
-  await esperar(delayAleatorio(1000, 6000));
+  let previous = modal.querySelectorAll('button').length;
+  let attempts = 0;
+  do {
+    const distance =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const amount = distance > 0 ? distance : container.clientHeight;
+    container.scrollBy({ top: amount, behavior: 'smooth' });
+    await esperar(delayAleatorio(1000, 6000));
+    attempts++;
+  } while (
+    attempts < 3 &&
+    modal.querySelectorAll('button').length <= previous
+  );
 }
 
 async function clicarBotaoSeguir(botao, perfil) {
