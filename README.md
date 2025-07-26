@@ -15,4 +15,8 @@ When visiting a profile the bot now scrolls the page a few times before liking
 posts. This ensures that enough posts are loaded in cases where Instagram uses
 lazy loading.
 
+The popup menu received a small visual overhaul and the in-page log panel now
+colorizes messages. Logs are also forwarded to the extension background for easy
+viewing in the browser console.
+
 Use responsibly and at your own risk.

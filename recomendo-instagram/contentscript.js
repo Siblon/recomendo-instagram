@@ -26,14 +26,16 @@ function criarPainel() {
     position: fixed;
     bottom: 10px;
     right: 10px;
-    background: #000;
+    background: rgba(0,0,0,0.8);
     color: lime;
     font-family: monospace;
-    font-size: 12px;
+    font-size: 13px;
     padding: 10px;
     max-height: 200px;
+    width: 240px;
     overflow-y: auto;
     z-index: 9999;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
   `;
   document.body.appendChild(logBox);
   log('✅ Iniciando automação...');
@@ -47,12 +49,14 @@ function addBotaoParar() {
     position: fixed;
     bottom: 10px;
     left: 10px;
-    background: red;
+    background: #d9534f;
     color: white;
     border: none;
-    padding: 10px;
+    padding: 10px 12px;
     z-index: 9999;
     font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
   `;
   btn.onclick = () => parar = true;
   document.body.appendChild(btn);
@@ -63,8 +67,16 @@ function log(msg) {
   const linha = document.createElement('div');
   linha.textContent = `[${tempo}] ${msg}`;
   linha.style.marginBottom = '4px';
+
+  if (/⚠️|❌/.test(msg)) linha.style.color = 'orange';
+  if (/✅|❤️/.test(msg)) linha.style.color = 'lime';
+
   logBox.appendChild(linha);
   logBox.scrollTop = logBox.scrollHeight;
+
+  try {
+    chrome.runtime.sendMessage({ tipo: 'log', msg });
+  } catch (_) {}
 }
 
 // === FUNÇÕES ===
