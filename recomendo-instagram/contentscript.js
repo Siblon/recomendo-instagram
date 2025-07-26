@@ -190,21 +190,32 @@ function extrairNomeDoPerfil(botao) {
     }
   }
 
-  if (!linkPerfil) {
-    log('⚠️ Link do perfil não encontrado');
-    log(item.outerHTML);
-    return { item, link: null, nome: null };
+  let nome = null;
+
+  if (linkPerfil) {
+    const hrefCompleto = linkPerfil.getAttribute('href') || linkPerfil.href;
+    if (!hrefCompleto) {
+      log('⚠️ Link do perfil sem href');
+    } else {
+      const hrefSemQuery = hrefCompleto.split('?')[0];
+      const partes = hrefSemQuery.split('/').filter(Boolean);
+      nome = partes[partes.length - 1] || null;
+    }
   }
 
-  const hrefCompleto = linkPerfil.getAttribute('href') || linkPerfil.href;
-  if (!hrefCompleto) {
-    log('⚠️ Link do perfil sem href');
-    return { item, link: linkPerfil, nome: null };
+  if (!nome) {
+    const altName = item.innerText?.split('\n')[0]?.trim();
+    if (altName) {
+      nome = altName;
+    } else if (!linkPerfil) {
+      log('⚠️ Link do perfil não encontrado');
+      log(item.outerHTML);
+    }
   }
 
-  const hrefSemQuery = hrefCompleto.split('?')[0];
-  const partes = hrefSemQuery.split('/').filter(Boolean);
-  const nome = partes[partes.length - 1] || null;
+  if (!nome) {
+    log('⚠️ Nome do perfil não identificado');
+  }
   return { item, link: linkPerfil, nome };
 }
 
