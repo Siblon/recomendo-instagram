@@ -132,6 +132,21 @@ async function curtirFotos() {
 async function voltarParaModal() {
   history.back();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+
+  let modal = getFollowerModal();
+  if (!modal) {
+    const abrirLink = select('a[href$="/followers/"]');
+    if (abrirLink) {
+      abrirLink.click();
+      await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+      modal = getFollowerModal();
+    }
+    if (!modal) {
+      log('⚠️ Falha ao reabrir a lista de seguidores');
+      return;
+    }
+  }
+
   log('⬅️ Voltou para lista de seguidores');
 }
 
