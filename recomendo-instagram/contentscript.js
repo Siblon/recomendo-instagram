@@ -16,6 +16,8 @@ const DEFAULT_CONFIG = {
 
 let config = { ...DEFAULT_CONFIG };
 let iniciado = false;
+
+// === VARIÁVEIS ===
 let parar = false;
 const logBox = document.createElement('div');
 const perfisSeguidos = new Set();
@@ -24,11 +26,17 @@ let ultimoItemProcessado = null;
 // === INTERFACE ===
 function criarPainel() {
   logBox.style = `
-    position: fixed; bottom: 10px; right: 10px;
-    background: #000; color: lime;
-    font-family: monospace; font-size: 12px;
-    padding: 10px; max-height: 200px;
-    overflow-y: auto; z-index: 9999;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #000;
+    color: lime;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 9999;
   `;
   document.body.appendChild(logBox);
   log('✅ Iniciando automação...');
@@ -39,10 +47,15 @@ function addBotaoParar() {
   const btn = document.createElement('button');
   btn.innerText = 'PARAR';
   btn.style = `
-    position: fixed; bottom: 10px; left: 10px;
-    background: red; color: white;
-    border: none; padding: 10px;
-    z-index: 9999; font-weight: bold;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: red;
+    color: white;
+    border: none;
+    padding: 10px;
+    z-index: 9999;
+    font-weight: bold;
   `;
   btn.onclick = () => parar = true;
   document.body.appendChild(btn);
@@ -62,7 +75,9 @@ const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const select = (selector, parent = document) => parent.querySelector(selector);
 const SELECTOR_MODAL = 'div[role="dialog"]';
 
-const getFollowerModal = () => select(SELECTOR_MODAL);
+function getFollowerModal() {
+  return select(SELECTOR_MODAL);
+}
 
 function getScrollableContainer(modal) {
   if (!modal) return null;
@@ -121,7 +136,7 @@ async function curtirFotos() {
       const botaoFechar = select('svg[aria-label="Fechar"]');
       botaoFechar?.closest('button')?.click();
       log('❤️ Curtiu 1 foto');
-    } catch {
+    } catch (err) {
       log('⚠️ Erro ao curtir foto');
     }
     await esperar(DELAY_CURTIDA);
@@ -132,6 +147,7 @@ async function curtirFotos() {
 async function voltarParaModal() {
   history.back();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+
   let modal = getFollowerModal();
   if (!modal) {
     const abrirLink = select('a[href$="/followers/"]');
@@ -145,36 +161,39 @@ async function voltarParaModal() {
       return;
     }
   }
+
   log('⬅️ Voltou para lista de seguidores');
 }
 
+// === MELHORADA ===
 function extrairNomeDoPerfil(botao) {
   const item = botao.closest('li') || botao.closest('div');
   if (!item) return { item: null, link: null, nome: null };
-  let linkPerfil = null;
-  let nome = null;
-  const anchors = [...item.querySelectorAll('a[href]')];
 
-  for (const a of anchors) {
-    const href = a.getAttribute('href');
-    if (!href) continue;
-    const match = href.match(/(?:https?:\/\/[^/]+)?\/(.*?)\/?$/);
-    if (!match) continue;
-    const candidate = match[1];
-    if (!candidate || candidate.includes('explore') || candidate.includes('direct')) continue;
-    linkPerfil = a;
-    nome = candidate;
-    break;
+  let nome = null;
+  let linkPerfil = item.querySelector('a[href*="/"]:not([href*="/p/"])');
+
+  if (linkPerfil) {
+    const href = linkPerfil.getAttribute('href');
+    const match = href?.match(/^\/([^/]+)\/?$/);
+    if (match) nome = match[1];
   }
 
   if (!nome) {
-    const tentativaAlt = item.querySelector('span, strong');
-    if (tentativaAlt) {
-      nome = tentativaAlt.textContent?.trim().replace(/^@/, '').split(/\s/)[0];
+    const tentativaAlt = item.querySelector('strong, span, div');
+    if (tentativaAlt?.textContent?.trim()) {
+      nome = tentativaAlt.textContent.trim().replace(/^@/, '').split(/\s/)[0];
     }
   }
 
   if (!nome) {
+    const img = item.querySelector('img');
+    if (img?.alt) {
+      nome = img.alt.split(' ')[0]?.replace(/^@/, '');
+    }
+  }
+
+  if (!nome || nome.length < 2 || nome.length > 30) {
     log('⚠️ Dados do perfil incompletos. Pulando.');
     log(item.outerHTML);
     return { item: null, link: null, nome: null };
@@ -198,11 +217,17 @@ function obterProximoBotao(modal) {
 
 async function processarPerfil(botao) {
   if (parar) return false;
+
   const modal = getFollowerModal();
   const { item, link: linkPerfil, nome: nomePerfil } = extrairNomeDoPerfil(botao);
 
-  if (!item || !modal || !item.closest(SELECTOR_MODAL) || !nomePerfil) {
-    log('⚠️ Dados do perfil incompletos. Pulando.');
+  if (!item || !modal || !item.closest(SELECTOR_MODAL)) {
+    log('⚠️ Item do perfil não encontrado no modal. Pulando.');
+    return false;
+  }
+
+  if (!nomePerfil) {
+    log('⚠️ Nome do perfil não identificado. Pulando.');
     return false;
   }
 
@@ -225,12 +250,15 @@ async function processarPerfil(botao) {
   perfisSeguidos.add(nomePerfil);
   linkPerfil?.click();
   await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
+
   log(`➡️ Visitando: @${nomePerfil}`);
   const seguirBtn = [...document.querySelectorAll('button')].find(isBotaoSeguir);
   await clicarBotaoSeguir(seguirBtn, nomePerfil);
+
   await esperar(TEMPO_ESPERA_ENTRE_ACOES);
   const curtidas = await curtirFotos();
   log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
+
   await voltarParaModal();
   ultimoItemProcessado = item;
   const proximo = item.nextElementSibling;
@@ -240,6 +268,7 @@ async function processarPerfil(botao) {
   } else {
     await scrollModal();
   }
+
   return true;
 }
 
@@ -256,9 +285,7 @@ async function iniciar() {
       break;
     }
 
-    await esperar(1000); // Aguarda carregamento
     let botao = obterProximoBotao(modal);
-
     if (!botao) {
       log('⚠️ Nenhum botão "Seguir" encontrado. Scrollando...');
       await scrollModal(modal);
