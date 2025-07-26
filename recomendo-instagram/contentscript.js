@@ -1,320 +1,111 @@
-// === CONFIGURAÇÕES DO USUÁRIO ===
-const MIN_DELAY = 30000;
-const MAX_DELAY = 300000;
-const DELAY_CURTIDA = 3000;
-const TEMPO_ESPERA_ENTRE_ACOES = 7000;
-const MAX_CURTIDAS = 4;
-const DELAY_SCROLL_MIN = 5000;
-const DELAY_SCROLL_MAX = 8000;
+// == Recomendo Instagram - Bot para seguir e curtir perfis ==
 
-const DEFAULT_CONFIG = {
-  maxPerfis: Infinity,
-  maxCurtidas: MAX_CURTIDAS,
-  minDelay: MIN_DELAY,
-  maxDelay: MAX_DELAY
+let stopBot = false;
+let perfisSeguidos = new Set();
+
+const log = (msg, tipo = 'info') => {
+  const prefixo = `[${new Date().toLocaleTimeString()}]`;
+  const cor = tipo === 'erro' ? '\x1b[31m' : tipo === 'aviso' ? '\x1b[33m' : '\x1b[32m';
+  console.log(`${cor}${prefixo} ${msg}\x1b[0m`);
 };
 
-let config = { ...DEFAULT_CONFIG };
-let iniciado = false;
+const delay = (s) => new Promise(res => setTimeout(res, s * 1000));
 
-// === VARIÁVEIS ===
-let parar = false;
-const logBox = document.createElement('div');
-const perfisSeguidos = new Set();
-let ultimoItemProcessado = null;
-
-// === INTERFACE ===
-function criarPainel() {
-  logBox.style = `
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: #000;
-    color: lime;
-    font-family: monospace;
-    font-size: 12px;
-    padding: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 9999;
-  `;
-  document.body.appendChild(logBox);
-  log('✅ Iniciando automação...');
-  addBotaoParar();
-}
-
-function addBotaoParar() {
-  const btn = document.createElement('button');
-  btn.innerText = 'PARAR';
-  btn.style = `
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    background: red;
-    color: white;
-    border: none;
-    padding: 10px;
-    z-index: 9999;
-    font-weight: bold;
-  `;
-  btn.onclick = () => parar = true;
-  document.body.appendChild(btn);
-}
-
-function log(msg) {
-  const tempo = new Date().toLocaleTimeString();
-  const linha = document.createElement('div');
-  linha.textContent = `[${tempo}] ${msg}`;
-  linha.style.marginBottom = '4px';
-  logBox.appendChild(linha);
-  logBox.scrollTop = logBox.scrollHeight;
-}
-
-// === FUNÇÕES ===
-const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const select = (selector, parent = document) => parent.querySelector(selector);
-const SELECTOR_MODAL = 'div[role="dialog"]';
-
-function getFollowerModal() {
-  return select(SELECTOR_MODAL);
-}
-
-function getScrollableContainer(modal) {
-  if (!modal) return null;
-  const elements = [modal, ...modal.querySelectorAll('*')];
-  for (const el of elements) {
-    const style = getComputedStyle(el);
-    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-      return el;
-    }
-  }
-  return modal;
-}
-
-function delayAleatorio(min, max) {
+const getDelayAleatorio = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+};
 
-function isBotaoSeguir(btn) {
-  if (!btn || !btn.innerText) return false;
-  const texto = btn.innerText.trim().toLowerCase();
-  return texto.includes('seguir') || texto.includes('follow');
-}
-
-async function scrollModal(modal = getFollowerModal()) {
-  if (!modal) return;
-  const container = getScrollableContainer(modal);
-  const start = container.scrollTop;
-  container.scrollTo({ top: start + container.clientHeight, behavior: 'smooth' });
-  await esperar(delayAleatorio(DELAY_SCROLL_MIN, DELAY_SCROLL_MAX));
-}
-
-async function clicarBotaoSeguir(botao, perfil) {
-  if (!botao) return false;
-  const texto = botao.innerText.trim().toLowerCase();
-  if (isBotaoSeguir(botao)) {
+const clicarSeguir = async (botao) => {
+  if (botao && botao.innerText.toLowerCase() === 'seguir') {
     botao.click();
-    log(`👤 Seguiu @${perfil}`);
+    log(`\u2705 Seguiu com sucesso.`);
     return true;
-  }
-  if (texto === 'solicitado' || texto === 'seguindo') {
-    log(`ℹ️ Já segue @${perfil}`);
-  }
-  return false;
-}
-
-async function curtirFotos() {
-  const links = [...document.querySelectorAll('article a')].filter((a) => a.href.includes('/p/'));
-  const fotosCurtidas = Math.min(links.length, Math.floor(Math.random() * (config.maxCurtidas + 1)));
-  for (let i = 0; i < fotosCurtidas; i++) {
-    if (parar) return 0;
-    try {
-      links[i].click();
-      await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-      const botaoLike = select('svg[aria-label="Curtir"], svg[aria-label="Like"]');
-      botaoLike?.closest('button')?.click();
-      const botaoFechar = select('svg[aria-label="Fechar"]');
-      botaoFechar?.closest('button')?.click();
-      log('❤️ Curtiu 1 foto');
-    } catch (err) {
-      log('⚠️ Erro ao curtir foto');
-    }
-    await esperar(DELAY_CURTIDA);
-  }
-  return fotosCurtidas;
-}
-
-async function voltarParaModal() {
-  history.back();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-
-  let modal = getFollowerModal();
-  if (!modal) {
-    const abrirLink = select('a[href$="/followers/"]');
-    if (abrirLink) {
-      abrirLink.click();
-      await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-      modal = getFollowerModal();
-    }
-    if (!modal) {
-      log('⚠️ Falha ao reabrir a lista de seguidores');
-      return;
-    }
-  }
-
-  log('⬅️ Voltou para lista de seguidores');
-}
-
-// === MELHORADA ===
-function extrairNomeDoPerfil(botao) {
-  const item = botao.closest('li') || botao.closest('div');
-  if (!item) return { item: null, link: null, nome: null };
-
-  let nome = null;
-  let linkPerfil = item.querySelector('a[href*="/"]:not([href*="/p/"])');
-
-  if (linkPerfil) {
-    const href = linkPerfil.getAttribute('href');
-    const match = href?.match(/^\/([^/]+)\/?$/);
-    if (match) nome = match[1];
-  }
-
-  if (!nome) {
-    const tentativaAlt = item.querySelector('strong, span, div');
-    if (tentativaAlt?.textContent?.trim()) {
-      nome = tentativaAlt.textContent.trim().replace(/^@/, '').split(/\s/)[0];
-    }
-  }
-
-  if (!nome) {
-    const img = item.querySelector('img');
-    if (img?.alt) {
-      nome = img.alt.split(' ')[0]?.replace(/^@/, '');
-    }
-  }
-
-  if (!nome || nome.length < 2 || nome.length > 30) {
-    log('⚠️ Dados do perfil incompletos. Pulando.');
-    log(item.outerHTML);
-    return { item: null, link: null, nome: null };
-  }
-
-  return { item, link: linkPerfil, nome };
-}
-
-function obterProximoBotao(modal) {
-  const botoesSeguir = [...modal.querySelectorAll('button')].filter(isBotaoSeguir);
-  if (botoesSeguir.length === 0) return null;
-  if (!ultimoItemProcessado) return botoesSeguir[0];
-  for (const btn of botoesSeguir) {
-    const item = btn.closest('li') || btn.closest('div');
-    if (item && (ultimoItemProcessado.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-      return btn;
-    }
-  }
-  return null;
-}
-
-async function processarPerfil(botao) {
-  if (parar) return false;
-
-  const modal = getFollowerModal();
-  const { item, link: linkPerfil, nome: nomePerfil } = extrairNomeDoPerfil(botao);
-
-  if (!item || !modal || !item.closest(SELECTOR_MODAL)) {
-    log('⚠️ Item do perfil não encontrado no modal. Pulando.');
-    return false;
-  }
-
-  if (!nomePerfil) {
-    log('⚠️ Nome do perfil não identificado. Pulando.');
-    return false;
-  }
-
-  const textoBotao = botao.innerText?.trim().toLowerCase();
-  if (textoBotao.includes('seguindo') || textoBotao.includes('solicitado')) {
-    log(`⚠️ Perfil já seguido ou solicitado: @${nomePerfil}`);
-    perfisSeguidos.add(nomePerfil);
-    ultimoItemProcessado = item;
-    await scrollModal();
-    return false;
-  }
-
-  if (perfisSeguidos.has(nomePerfil)) {
-    log(`⚠️ Perfil já processado: @${nomePerfil}`);
-    ultimoItemProcessado = item;
-    await scrollModal();
-    return false;
-  }
-
-  perfisSeguidos.add(nomePerfil);
-  linkPerfil?.click();
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES * 2);
-
-  log(`➡️ Visitando: @${nomePerfil}`);
-  const seguirBtn = [...document.querySelectorAll('button')].find(isBotaoSeguir);
-  await clicarBotaoSeguir(seguirBtn, nomePerfil);
-
-  await esperar(TEMPO_ESPERA_ENTRE_ACOES);
-  const curtidas = await curtirFotos();
-  log(`❤️ @${nomePerfil}: curtiu ${curtidas} foto(s)`);
-
-  await voltarParaModal();
-  ultimoItemProcessado = item;
-  const proximo = item.nextElementSibling;
-  if (proximo) {
-    proximo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    await esperar(delayAleatorio(800, 1500));
   } else {
-    await scrollModal();
+    log(`\u26A0\uFE0F Bot\u00e3o 'Seguir' n\u00e3o encontrado ou j\u00e1 seguido.`, 'aviso');
+    return false;
   }
+};
 
-  return true;
-}
+const extrairNomeDoPerfil = () => {
+  const nomeEl = document.querySelector('header h2, header h1');
+  return nomeEl ? nomeEl.innerText.trim() : null;
+};
 
-async function iniciar() {
-  criarPainel();
-  let modal = getFollowerModal();
-  if (!modal) return log('⚠️ Modal de seguidores não encontrado');
+const voltarParaLista = () => {
+  window.history.back();
+};
 
-  let processados = 0;
-  while (!parar && processados < config.maxPerfis) {
-    modal = getFollowerModal();
-    if (!modal) {
-      log('⚠️ Modal de seguidores não encontrado');
-      break;
+const visitarPerfil = (link) => {
+  return new Promise(resolve => {
+    window.location.href = link;
+    const checar = setInterval(() => {
+      if (document.querySelector('header')) {
+        clearInterval(checar);
+        resolve();
+      }
+    }, 1000);
+  });
+};
+
+const iniciarBot = async () => {
+  stopBot = false;
+  log('\u2705 Iniciando aut\u00f4mata\u00e7\u00e3o...');
+
+  const maxPerfis = parseInt(document.getElementById('max').value);
+  const fotosParaCurtir = parseInt(document.getElementById('curtidas').value);
+  const delayMin = parseInt(document.getElementById('delayMin').value);
+  const delayMax = parseInt(document.getElementById('delayMax').value);
+
+  const lista = document.querySelectorAll('div[role="dialog"] li');
+
+  for (let i = 0; i < lista.length && !stopBot && perfisSeguidos.size < maxPerfis; i++) {
+    const item = lista[i];
+    const linkPerfil = item.querySelector('a');
+
+    if (!linkPerfil || perfisSeguidos.has(linkPerfil.href)) {
+      log(`\u26A0\uFE0F Perfil j\u00e1 processado: ${linkPerfil?.href || '@desconhecido'}`, 'aviso');
+      continue;
     }
 
-    let botao = obterProximoBotao(modal);
-    if (!botao) {
-      log('⚠️ Nenhum botão "Seguir" encontrado. Scrollando...');
-      await scrollModal(modal);
-      botao = obterProximoBotao(modal);
-      if (!botao) continue;
-    }
+    perfisSeguidos.add(linkPerfil.href);
+    await visitarPerfil(linkPerfil.href);
+    await delay(2);
 
-    const perfilProcessado = await processarPerfil(botao);
-    if (perfilProcessado) processados++;
+    const nome = extrairNomeDoPerfil();
+    log(`\u{1F465} Visitando: ${nome || 'Desconhecido'}`);
 
-    if (parar) break;
-    const delay = delayAleatorio(config.minDelay, config.maxDelay);
-    log(`⏳ Próxima ação em: ${(delay / 1000).toFixed(0)}s`);
-    await esperar(delay);
+    const botaoSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
+    await clicarSeguir(botaoSeguir);
+
+    await delay(getDelayAleatorio(delayMin, delayMax));
+    voltarParaLista();
+    await delay(3);
   }
 
-  log('✅ Fim da automação');
-}
+  log('\u2705 Finalizado.');
+};
 
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.type === 'config') {
-    const { maxPerfis, maxCurtidas, minDelay, maxDelay } = request.data;
-    config.maxPerfis = Number(maxPerfis) || DEFAULT_CONFIG.maxPerfis;
-    config.maxCurtidas = Math.min(Number(maxCurtidas), MAX_CURTIDAS);
-    config.minDelay = (Number(minDelay) || MIN_DELAY / 1000) * 1000;
-    config.maxDelay = (Number(maxDelay) || MAX_DELAY / 1000) * 1000;
-    if (!iniciado) {
-      iniciado = true;
-      iniciar();
-    }
-  }
-});
+const pararBot = () => {
+  stopBot = true;
+  log('\u274C Bot parado pelo usu\u00e1rio.', 'erro');
+};
+
+const criarPainel = () => {
+  const painel = document.createElement('div');
+  painel.style = 'position:fixed;top:10px;right:10px;background:#fff;border:2px solid #000;padding:10px;z-index:9999999;font-family:sans-serif';
+  painel.innerHTML = `
+    <h3>Recomendo Instagram</h3>
+    Nº máx. de perfis por sessão:<br><input id="max" value="10"><br>
+    Qtd. de fotos para curtir (0-4):<br><input id="curtidas" value="1"><br>
+    Delay mínimo (s):<br><input id="delayMin" value="3"><br>
+    Delay máximo (s):<br><input id="delayMax" value="6"><br><br>
+    <button id="startBot">Iniciar Bot</button>
+    <button id="stopBot" style="background:red;color:white;margin-left:5px;">Parar</button>
+  `;
+  document.body.appendChild(painel);
+  
+  document.getElementById('startBot').onclick = iniciarBot;
+  document.getElementById('stopBot').onclick = pararBot;
+};
+
+criarPainel();
