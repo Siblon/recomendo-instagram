@@ -1,5 +1,3 @@
-// === Painel Recomendo Instagram (Versão Corrigida e Robusta) === //
-
 (function () {
   if (document.getElementById("recomendoPainel")) return;
 
@@ -108,7 +106,7 @@
     const getScrollContainer = () => {
       const dialog = document.querySelector('div[role="dialog"]');
       if (!dialog) return null;
-      return dialog.querySelector("div[style*='max-height'] ul");
+      return dialog.querySelector('div > div:nth-child(2) > div');
     };
 
     const processed = new Set();
