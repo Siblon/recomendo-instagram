@@ -1,151 +1,138 @@
-// == Recomendo Instagram - Bot para seguir e curtir perfis ==
+// === Painel Recomendo Instagram (Versão Única, Robusta e Modular) === //
 
-let stopBot = false;
-let perfisSeguidos = new Set();
-let isBotRunning = false;
-let botConfig = { maxPerfis: 10, maxCurtidas: 1, minDelay: 3, maxDelay: 6 };
-let panelInitialized = false;
+(function () {
+  // Evita duplicar o painel
+  if (document.getElementById("recomendoPainel")) return;
 
-const log = (msg, tipo = 'info') => {
-  const prefixo = `[${new Date().toLocaleTimeString()}]`;
-  const cor = tipo === 'erro' ? '\x1b[31m' : tipo === 'aviso' ? '\x1b[33m' : '\x1b[32m';
-  console.log(`${cor}${prefixo} ${msg}\x1b[0m`);
-};
+  // Variáveis de controle
+  let stopBot = false;
+  let isRunning = false;
 
-const delay = (s) => new Promise(res => setTimeout(res, s * 1000));
-
-const getDelayAleatorio = (min, max) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
-
-const clicarSeguir = async (botao) => {
-  if (botao && botao.innerText.toLowerCase() === 'seguir') {
-    botao.click();
-    log(`\u2705 Seguiu com sucesso.`);
-    return true;
-  } else {
-    log(`\u26A0\uFE0F Bot\u00e3o 'Seguir' n\u00e3o encontrado ou j\u00e1 seguido.`, 'aviso');
-    return false;
-  }
-};
-
-const extrairNomeDoPerfil = () => {
-  const nomeEl = document.querySelector('header h2, header h1');
-  return nomeEl ? nomeEl.innerText.trim() : null;
-};
-
-const voltarParaLista = () => {
-  window.history.back();
-};
-
-const visitarPerfil = (link) => {
-  return new Promise(resolve => {
-    window.location.href = link;
-    const checar = setInterval(() => {
-      if (document.querySelector('header')) {
-        clearInterval(checar);
-        resolve();
-      }
-    }, 1000);
-  });
-};
-
-const iniciarBot = async () => {
-  if (isBotRunning) return;
-  isBotRunning = true;
-  stopBot = false;
-  log('\u2705 Iniciando aut\u00f4mata\u00e7\u00e3o...');
-
-  const {
-    maxPerfis,
-    maxCurtidas: fotosParaCurtir,
-    minDelay: delayMin,
-    maxDelay: delayMax
-  } = botConfig;
-
-  const lista = document.querySelectorAll('div[role="dialog"] li');
-
-  for (let i = 0; i < lista.length && !stopBot && perfisSeguidos.size < maxPerfis; i++) {
-    const item = lista[i];
-    const linkPerfil = item.querySelector('a');
-
-    if (!linkPerfil || perfisSeguidos.has(linkPerfil.href)) {
-      log(`\u26A0\uFE0F Perfil j\u00e1 processado: ${linkPerfil?.href || '@desconhecido'}`, 'aviso');
-      continue;
+  // === Estilo do painel === //
+  const style = document.createElement("style");
+  style.textContent = `
+    #recomendoPainel {
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      background: #111;
+      color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      font-family: sans-serif;
+      font-size: 14px;
+      z-index: 999999;
+      width: 260px;
     }
+    #recomendoPainel input {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px;
+      border: none;
+      border-radius: 6px;
+    }
+    #recomendoPainel button {
+      width: 48%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #iniciarBtn { background: #008cff; color: white; }
+    #pararBtn { background: red; color: white; float: right; }
+    #logPainel {
+      background: #000;
+      color: #0f0;
+      padding: 8px;
+      margin-top: 10px;
+      height: 150px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+  `;
+  document.head.appendChild(style);
 
-    perfisSeguidos.add(linkPerfil.href);
-    await visitarPerfil(linkPerfil.href);
-    await delay(2);
-
-    const nome = extrairNomeDoPerfil();
-    log(`\u{1F465} Visitando: ${nome || 'Desconhecido'}`);
-
-  const botaoSeguir = [...document.querySelectorAll('button')].find(b => b.innerText.toLowerCase() === 'seguir');
-  const username = item.querySelector('span')?.innerText;
-  if (username) log(`\u2795 Seguindo @${username}`);
-  await clicarSeguir(botaoSeguir);
-
-    await delay(getDelayAleatorio(delayMin, delayMax));
-    voltarParaLista();
-    await delay(3);
-  }
-
-  log('\u2705 Finalizado.');
-  isBotRunning = false;
-};
-
-const pararBot = () => {
-  stopBot = true;
-  isBotRunning = false;
-  log('\u274C Bot parado pelo usu\u00e1rio.', 'erro');
-};
-
-const startAutomation = () => iniciarBot();
-
-const criarPainel = () => {
-  const painel = document.createElement('div');
-  painel.id = 'botPanel';
-  painel.style = 'position:fixed;top:10px;right:10px;background:#fff;border:2px solid #000;padding:10px;z-index:9999999;font-family:sans-serif';
+  // === Painel === //
+  const painel = document.createElement("div");
+  painel.id = "recomendoPainel";
   painel.innerHTML = `
-    <h3>Recomendo Instagram</h3>
-    N\u00ba m\u00e1x. de perfis por sess\u00e3o:<br><input id="max" value="10"><br>
-    Qtd. de fotos para curtir (0-4):<br><input id="curtidas" value="1"><br>
-    Delay m\u00ednimo (s):<br><input id="delayMin" value="3"><br>
-    Delay m\u00e1ximo (s):<br><input id="delayMax" value="6"><br><br>
-    <button id="startBot">Iniciar Bot</button>
-    <button id="stopBot" style="background:red;color:white;margin-left:5px;">Parar</button>
+    <h4>Recomendo Instagram</h4>
+    <label>Nº máx. de perfis:</label>
+    <input id="maxPerfis" type="number" value="10" />
+    <label>Qtd. de fotos para curtir (0-4):</label>
+    <input id="fotosCurtir" type="number" value="1" />
+    <label>Delay mínimo (s):</label>
+    <input id="delayMin" type="number" value="30" />
+    <label>Delay máximo (s):</label>
+    <input id="delayMax" type="number" value="60" />
+    <div style="display:flex; justify-content:space-between;">
+      <button id="iniciarBtn">Iniciar Bot</button>
+      <button id="pararBtn">Parar</button>
+    </div>
+    <div id="logPainel"></div>
   `;
   document.body.appendChild(painel);
 
-  const startBtn = document.getElementById('startBot');
-  startBtn.addEventListener('click', () => {
-    botConfig = {
-      maxPerfis: parseInt(document.getElementById('max').value, 10),
-      maxCurtidas: parseInt(document.getElementById('curtidas').value, 10),
-      minDelay: parseInt(document.getElementById('delayMin').value, 10),
-      maxDelay: parseInt(document.getElementById('delayMax').value, 10)
-    };
-    startBtn.disabled = true;
-    startAutomation();
-  }, { once: true });
+  const log = (msg, cor = '#0f0') => {
+    const logEl = document.getElementById("logPainel");
+    const time = new Date().toLocaleTimeString();
+    logEl.innerHTML += `<div style="color:${cor}">[${time}] ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  };
 
-  document.getElementById('stopBot').addEventListener('click', pararBot);
-  panelInitialized = true;
-};
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-if (!window.recomendoMessageListenerAdded) {
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'config') {
-      botConfig = request.data;
-      iniciarBot();
-      sendResponse({ status: 'started' });
+  // === Função principal da automação === //
+  async function startBot() {
+    if (isRunning) return;
+    isRunning = true;
+    stopBot = false;
+
+    const max = parseInt(document.getElementById("maxPerfis").value);
+    const fotos = parseInt(document.getElementById("fotosCurtir").value);
+    const delayMin = parseInt(document.getElementById("delayMin").value) * 1000;
+    const delayMax = parseInt(document.getElementById("delayMax").value) * 1000;
+
+    log("Iniciando automação...");
+
+    let perfis = [...document.querySelectorAll("button")].filter(btn => btn.innerText.toLowerCase() === "seguir");
+
+    for (let i = 0; i < Math.min(max, perfis.length); i++) {
+      if (stopBot) break;
+
+      let btn = perfis[i];
+      let nome = btn.closest("li")?.innerText?.split("\n")[0] || `Perfil ${i + 1}`;
+      log(`Seguindo: ${nome}`);
+
+      btn.click();
+
+      // Curte fotos se quiser (placeholder, implementar depois)
+      if (fotos > 0) {
+        log(`▶️ Curtindo ${fotos} fotos (em breve)`);
+        // Aqui pode-se abrir o perfil e curtir N fotos
+      }
+
+      let espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+      log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
+      await delay(espera);
     }
-  });
-  window.recomendoMessageListenerAdded = true;
-}
 
-if (!document.getElementById('botPanel')) {
-  criarPainel();
-}
+    log("✅ Finalizado ou interrompido.");
+    isRunning = false;
+  }
 
+  // === Botões === //
+  document.getElementById("iniciarBtn").onclick = () => {
+    stopBot = false;
+    startBot();
+  };
+
+  document.getElementById("pararBtn").onclick = () => {
+    stopBot = true;
+    log("⛔ Automação interrompida.", 'orange');
+  };
+})();
