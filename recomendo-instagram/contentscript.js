@@ -1,3 +1,5 @@
+// == Painel Recomendo Instagram (Atualizado e Robusto) == //
+
 (function () {
   if (document.getElementById("recomendoPainel")) return;
 
@@ -76,13 +78,32 @@
       }, 300);
     });
 
+  function getFollowersListContainer() {
+    const dialog = document.querySelector('div[role="dialog"]');
+    if (!dialog) return null;
+
+    // Tentativa 1: seletor padrão
+    let list1 = dialog.querySelector("div[style*='overflow: auto'] ul");
+    if (list1) return list1;
+
+    // Tentativa 2: fallback alternativo
+    let uls = dialog.getElementsByTagName("ul");
+    for (let ul of uls) {
+      if (ul.querySelector('li button')) {
+        return ul;
+      }
+    }
+
+    return null;
+  }
+
   async function curtirFotos(qtd) {
     for (let i = 0; i < qtd; i++) {
       const posts = document.querySelectorAll('article a[href*="/p/"]');
       if (i >= posts.length) break;
       posts[i].scrollIntoView();
       posts[i].click();
-      await waitFor(() => document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"], svg[aria-label="Descurtir"], svg[aria-label="Unlike"]'));
+      await waitFor(() => document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]'), 5000);
       const likeSvg = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
       if (likeSvg) likeSvg.parentElement.click();
       const fechar = document.querySelector('svg[aria-label="Fechar"], svg[aria-label="Close"]');
@@ -103,20 +124,14 @@
 
     log("Iniciando automação...");
 
-    const getScrollContainer = () => {
-      const dialog = document.querySelector('div[role="dialog"]');
-      if (!dialog) return null;
-      return dialog.querySelector('div > div:nth-child(2) > div');
-    };
-
     const processed = new Set();
 
     while (processed.size < max) {
       if (stopBot) break;
 
-      const listaEl = getScrollContainer();
+      const listaEl = getFollowersListContainer();
       if (!listaEl) {
-        log("⚠️ Modal de seguidores não encontrado.", "orange");
+        log("⚠️ Modal de seguidores não encontrado (checar estrutura do DOM).", "orange");
         break;
       }
 
@@ -140,7 +155,7 @@
       log(`Visitando: @${nome}`);
       link.click();
 
-      await waitFor(() => !document.querySelector('div[role="dialog"]'));
+      await waitFor(() => !document.querySelector('div[role="dialog"]'), 8000);
       await delay(2000);
 
       if (fotos > 0) {
@@ -154,11 +169,11 @@
       window.history.back();
       const voltou = await waitFor(() => document.querySelector('div[role="dialog"]'), 10000);
       if (!voltou) {
-        log("⚠️ Não voltou para o modal.", "orange");
+        log("⚠️ Não voltou para o modal. Encerrando...", "orange");
         break;
       }
 
-      const novaLista = getScrollContainer();
+      const novaLista = getFollowersListContainer();
       if (novaLista) novaLista.scrollBy(0, 200);
 
       const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
