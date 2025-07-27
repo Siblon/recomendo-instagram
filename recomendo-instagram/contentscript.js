@@ -99,24 +99,31 @@
 
     log("Iniciando automação...");
 
-    let perfis = [...document.querySelectorAll("button")].filter(btn => btn.innerText.toLowerCase() === "seguir");
+    const getScrollContainer = () =>
+      document.querySelector('div[role="dialog"] ul')?.parentElement;
 
-    for (let i = 0; i < Math.min(max, perfis.length); i++) {
+    for (let seguido = 0; seguido < max; seguido++) {
       if (stopBot) break;
 
-      let btn = perfis[i];
-      let nome = btn.closest("li")?.innerText?.split("\n")[0] || `Perfil ${i + 1}`;
-      log(`Seguindo: ${nome}`);
+      const btn = [...document.querySelectorAll("button")].find(b => b.innerText.toLowerCase() === "seguir");
+      if (!btn) {
+        log("Sem mais perfis para seguir.");
+        break;
+      }
 
+      const nome = btn.closest("li")?.innerText?.split("\n")[0] || `Perfil ${seguido + 1}`;
+      log(`Seguindo: ${nome}`);
       btn.click();
 
-      // Curte fotos se quiser (placeholder, implementar depois)
+      const lista = getScrollContainer();
+      if (lista) lista.scrollBy(0, 150);
+
       if (fotos > 0) {
         log(`▶️ Curtindo ${fotos} fotos (em breve)`);
         // Aqui pode-se abrir o perfil e curtir N fotos
       }
 
-      let espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+      const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
       log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
       await delay(espera);
     }
