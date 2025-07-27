@@ -1,5 +1,3 @@
-// == Painel Recomendo Instagram (Atualizado e Robusto) == //
-
 (function () {
   if (document.getElementById("recomendoPainel")) return;
 
@@ -82,16 +80,12 @@
     const dialog = document.querySelector('div[role="dialog"]');
     if (!dialog) return null;
 
-    // Tentativa 1: seletor padrão
-    let list1 = dialog.querySelector("div[style*='overflow: auto'] ul");
-    if (list1) return list1;
+    const scrollBox = dialog.querySelector('div[style*="overflow: auto"]') || dialog.querySelector("section > div > div > div:nth-child(2)");
+    if (!scrollBox) return null;
 
-    // Tentativa 2: fallback alternativo
-    let uls = dialog.getElementsByTagName("ul");
+    const uls = scrollBox.querySelectorAll("ul");
     for (let ul of uls) {
-      if (ul.querySelector('li button')) {
-        return ul;
-      }
+      if (ul.querySelector('li button')) return ul;
     }
 
     return null;
@@ -131,7 +125,7 @@
 
       const listaEl = getFollowersListContainer();
       if (!listaEl) {
-        log("⚠️ Modal de seguidores não encontrado (checar estrutura do DOM).", "orange");
+        log("⚠️ Modal de seguidores não encontrado (DOM novo).", "orange");
         break;
       }
 
@@ -144,7 +138,7 @@
       });
 
       if (!item) {
-        listaEl.scrollBy(0, 300);
+        listaEl.parentElement.scrollBy(0, 300);
         await delay(1500);
         continue;
       }
@@ -174,7 +168,7 @@
       }
 
       const novaLista = getFollowersListContainer();
-      if (novaLista) novaLista.scrollBy(0, 200);
+      if (novaLista) novaLista.parentElement.scrollBy(0, 200);
 
       const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
       log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
