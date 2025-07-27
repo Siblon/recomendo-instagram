@@ -15,6 +15,12 @@ When visiting a profile the bot now scrolls the page a few times before liking
 posts. This ensures that enough posts are loaded in cases where Instagram uses
 lazy loading.
 
+The flow for each user is:
+1. Scroll and click the profile name in the modal.
+2. Wait for the page to open and like up to the configured number of photos.
+3. Click **Seguir**.
+4. Go back to the followers modal and repeat the process.
+
 After each visit the script tries multiple times to return to the followers
 modal, reducing failures when the page navigation lags.
 

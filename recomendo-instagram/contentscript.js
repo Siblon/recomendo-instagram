@@ -86,6 +86,35 @@
 
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  const waitFor = (cond, timeout = 10000) =>
+    new Promise(resolve => {
+      const start = Date.now();
+      const t = setInterval(() => {
+        if (cond()) {
+          clearInterval(t);
+          resolve(true);
+        } else if (Date.now() - start > timeout) {
+          clearInterval(t);
+          resolve(false);
+        }
+      }, 300);
+    });
+
+  async function curtirFotos(qtd) {
+    for (let i = 0; i < qtd; i++) {
+      const posts = document.querySelectorAll('article a[href*="/p/"]');
+      if (i >= posts.length) break;
+      posts[i].scrollIntoView();
+      posts[i].click();
+      await waitFor(() => document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"], svg[aria-label="Descurtir"], svg[aria-label="Unlike"]'));
+      const likeSvg = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+      if (likeSvg) likeSvg.parentElement.click();
+      const fechar = document.querySelector('svg[aria-label="Fechar"], svg[aria-label="Close"]');
+      if (fechar) fechar.parentElement.click();
+      await delay(800);
+    }
+  }
+
   // === Função principal da automação === //
   async function startBot() {
     if (isRunning) return;
@@ -102,26 +131,58 @@
     const getScrollContainer = () =>
       document.querySelector('div[role="dialog"] ul')?.parentElement;
 
-    for (let seguido = 0; seguido < max; seguido++) {
+    const processed = new Set();
+
+    while (processed.size < max) {
       if (stopBot) break;
 
-      const btn = [...document.querySelectorAll("button")].find(b => b.innerText.toLowerCase() === "seguir");
-      if (!btn) {
-        log("Sem mais perfis para seguir.");
+      let item = [...document.querySelectorAll('div[role="dialog"] li')]
+        .find(li => {
+          const link = li.querySelector('a');
+          return link && !processed.has(link.innerText.trim());
+        });
+
+      if (!item) {
+        const lista = getScrollContainer();
+        if (lista) {
+          lista.scrollBy(0, 300);
+          await delay(1500);
+          continue;
+        }
+        log('Lista de seguidores não encontrada.');
         break;
       }
 
-      const nome = btn.closest("li")?.innerText?.split("\n")[0] || `Perfil ${seguido + 1}`;
-      log(`Seguindo: ${nome}`);
-      btn.click();
+      const link = item.querySelector('a');
+      const nome = link.innerText.trim();
+      processed.add(nome);
+      log(`Visitando: ${nome}`);
+      link.click();
+
+      // Aguarda a página do perfil carregar
+      await waitFor(() => !document.querySelector('div[role="dialog"]'));
+      await delay(2000);
+
+      // Curte até X fotos
+      if (fotos > 0) {
+        await curtirFotos(fotos);
+      }
+
+      // Segue o perfil se possível
+      const seguirBtn = [...document.querySelectorAll('button')]
+        .find(b => /^(seguir|follow)$/i.test(b.innerText.trim()));
+      if (seguirBtn) seguirBtn.click();
+
+      // Volta para o modal de seguidores
+      window.history.back();
+      const voltou = await waitFor(() => document.querySelector('div[role="dialog"]'));
+      if (!voltou) {
+        log('Não foi possível retornar ao modal.', 'orange');
+        break;
+      }
 
       const lista = getScrollContainer();
       if (lista) lista.scrollBy(0, 150);
-
-      if (fotos > 0) {
-        log(`▶️ Curtindo ${fotos} fotos (em breve)`);
-        // Aqui pode-se abrir o perfil e curtir N fotos
-      }
 
       const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
       log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
