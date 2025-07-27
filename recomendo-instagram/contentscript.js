@@ -4,6 +4,7 @@ let stopBot = false;
 let perfisSeguidos = new Set();
 let isBotRunning = false;
 let botConfig = { maxPerfis: 10, maxCurtidas: 1, minDelay: 3, maxDelay: 6 };
+let panelInitialized = false;
 
 const log = (msg, tipo = 'info') => {
   const prefixo = `[${new Date().toLocaleTimeString()}]`;
@@ -100,11 +101,51 @@ const pararBot = () => {
   log('\u274C Bot parado pelo usu\u00e1rio.', 'erro');
 };
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'config') {
-    botConfig = request.data;
-    iniciarBot();
-    sendResponse({ status: 'started' });
-  }
-});
+const startAutomation = () => iniciarBot();
+
+const criarPainel = () => {
+  const painel = document.createElement('div');
+  painel.id = 'botPanel';
+  painel.style = 'position:fixed;top:10px;right:10px;background:#fff;border:2px solid #000;padding:10px;z-index:9999999;font-family:sans-serif';
+  painel.innerHTML = `
+    <h3>Recomendo Instagram</h3>
+    N\u00ba m\u00e1x. de perfis por sess\u00e3o:<br><input id="max" value="10"><br>
+    Qtd. de fotos para curtir (0-4):<br><input id="curtidas" value="1"><br>
+    Delay m\u00ednimo (s):<br><input id="delayMin" value="3"><br>
+    Delay m\u00e1ximo (s):<br><input id="delayMax" value="6"><br><br>
+    <button id="startBot">Iniciar Bot</button>
+    <button id="stopBot" style="background:red;color:white;margin-left:5px;">Parar</button>
+  `;
+  document.body.appendChild(painel);
+
+  const startBtn = document.getElementById('startBot');
+  startBtn.addEventListener('click', () => {
+    botConfig = {
+      maxPerfis: parseInt(document.getElementById('max').value, 10),
+      maxCurtidas: parseInt(document.getElementById('curtidas').value, 10),
+      minDelay: parseInt(document.getElementById('delayMin').value, 10),
+      maxDelay: parseInt(document.getElementById('delayMax').value, 10)
+    };
+    startBtn.disabled = true;
+    startAutomation();
+  }, { once: true });
+
+  document.getElementById('stopBot').addEventListener('click', pararBot);
+  panelInitialized = true;
+};
+
+if (!window.recomendoMessageListenerAdded) {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'config') {
+      botConfig = request.data;
+      iniciarBot();
+      sendResponse({ status: 'started' });
+    }
+  });
+  window.recomendoMessageListenerAdded = true;
+}
+
+if (!document.getElementById('botPanel')) {
+  criarPainel();
+}
 
