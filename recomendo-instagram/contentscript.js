@@ -76,12 +76,13 @@
       }, 300);
     });
 
-  // FUNÇÃO AJUSTADA PARA DETECTAR O MODAL CORRETAMENTE
   function getFollowersListContainer() {
     const modal = document.querySelector('div[role="dialog"]');
     if (!modal) return null;
 
+    // Procura o ul dentro do modal
     const ul = modal.querySelector('ul');
+
     if (ul && ul.querySelector('li button')) return ul;
 
     return null;
