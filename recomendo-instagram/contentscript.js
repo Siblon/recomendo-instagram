@@ -76,17 +76,13 @@
       }, 300);
     });
 
+  // FUNÇÃO AJUSTADA PARA DETECTAR O MODAL CORRETAMENTE
   function getFollowersListContainer() {
-    const dialog = document.querySelector('div[role="dialog"]');
-    if (!dialog) return null;
+    const modal = document.querySelector('div[role="dialog"]');
+    if (!modal) return null;
 
-    const scrollBox = dialog.querySelector('div[style*="overflow: auto"]') || dialog.querySelector("section > div > div > div:nth-child(2)");
-    if (!scrollBox) return null;
-
-    const uls = scrollBox.querySelectorAll("ul");
-    for (let ul of uls) {
-      if (ul.querySelector('li button')) return ul;
-    }
+    const ul = modal.querySelector('ul');
+    if (ul && ul.querySelector('li button')) return ul;
 
     return null;
   }
