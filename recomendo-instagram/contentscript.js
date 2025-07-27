@@ -53,6 +53,16 @@
   `;
   document.body.appendChild(painel);
 
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request.type === "config" && request.data) {
+      const { maxPerfis, maxCurtidas, minDelay, maxDelay } = request.data;
+      document.getElementById("maxPerfis").value = maxPerfis;
+      document.getElementById("fotosCurtir").value = maxCurtidas;
+      document.getElementById("delayMin").value = minDelay;
+      document.getElementById("delayMax").value = maxDelay;
+    }
+  });
+
   const log = (msg, cor = '#0f0') => {
     const logEl = document.getElementById("logPainel");
     const time = new Date().toLocaleTimeString();
