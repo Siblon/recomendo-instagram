@@ -1,4 +1,5 @@
-// === Painel Recomendo Instagram (Versão Atualizada - Modal Only) === //
+// === Painel Recomendo Instagram (Versão Corrigida e Robusta) === //
+
 (function () {
   if (document.getElementById("recomendoPainel")) return;
 
@@ -14,15 +15,21 @@
       font-family: sans-serif; font-size: 14px;
       z-index: 999999; width: 260px;
     }
-    #recomendoPainel input, #recomendoPainel button {
-      width: 100%; margin-bottom: 8px; padding: 6px;
+    #recomendoPainel input {
+      width: 100%; margin-bottom: 8px;
+      padding: 6px; border: none; border-radius: 6px;
+    }
+    #recomendoPainel button {
+      width: 48%; padding: 8px;
       border: none; border-radius: 6px;
+      font-weight: bold; cursor: pointer;
     }
     #iniciarBtn { background: #008cff; color: white; }
-    #pararBtn { background: red; color: white; }
+    #pararBtn { background: red; color: white; float: right; }
     #logPainel {
       background: #000; color: #0f0; padding: 8px;
-      height: 150px; overflow-y: auto; font-family: monospace;
+      margin-top: 10px; height: 150px;
+      overflow-y: auto; font-family: monospace;
       font-size: 12px; border-radius: 6px;
     }
   `;
@@ -35,85 +42,135 @@
     <label>Nº máx. de perfis:</label>
     <input id="maxPerfis" type="number" value="10" />
     <label>Qtd. de fotos para curtir (0-4):</label>
-    <input id="fotosCurtir" type="number" value="0" />
+    <input id="fotosCurtir" type="number" value="1" />
     <label>Delay mínimo (s):</label>
     <input id="delayMin" type="number" value="30" />
     <label>Delay máximo (s):</label>
     <input id="delayMax" type="number" value="60" />
-    <button id="iniciarBtn">Iniciar Bot</button>
-    <button id="pararBtn">Parar</button>
+    <div style="display:flex; justify-content:space-between;">
+      <button id="iniciarBtn">Iniciar Bot</button>
+      <button id="pararBtn">Parar</button>
+    </div>
     <div id="logPainel"></div>
   `;
   document.body.appendChild(painel);
 
   const log = (msg, cor = '#0f0') => {
-    const el = document.getElementById("logPainel");
-    const hora = new Date().toLocaleTimeString();
-    el.innerHTML += `<div style="color:${cor}">[${hora}] ${msg}</div>`;
-    el.scrollTop = el.scrollHeight;
+    const logEl = document.getElementById("logPainel");
+    const time = new Date().toLocaleTimeString();
+    logEl.innerHTML += `<div style="color:${cor}">[${time}] ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
   };
 
-  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const getScrollContainer = () => {
-    const dialog = document.querySelector('div[role="dialog"]');
-    if (!dialog) return null;
-    return dialog.querySelector('ul')?.parentElement;
-  };
+  const waitFor = (cond, timeout = 10000) =>
+    new Promise(resolve => {
+      const start = Date.now();
+      const t = setInterval(() => {
+        if (cond()) {
+          clearInterval(t);
+          resolve(true);
+        } else if (Date.now() - start > timeout) {
+          clearInterval(t);
+          resolve(false);
+        }
+      }, 300);
+    });
 
-  const startBot = async () => {
+  async function curtirFotos(qtd) {
+    for (let i = 0; i < qtd; i++) {
+      const posts = document.querySelectorAll('article a[href*="/p/"]');
+      if (i >= posts.length) break;
+      posts[i].scrollIntoView();
+      posts[i].click();
+      await waitFor(() => document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"], svg[aria-label="Descurtir"], svg[aria-label="Unlike"]'));
+      const likeSvg = document.querySelector('svg[aria-label="Curtir"], svg[aria-label="Like"]');
+      if (likeSvg) likeSvg.parentElement.click();
+      const fechar = document.querySelector('svg[aria-label="Fechar"], svg[aria-label="Close"]');
+      if (fechar) fechar.parentElement.click();
+      await delay(800);
+    }
+  }
+
+  async function startBot() {
     if (isRunning) return;
     isRunning = true;
     stopBot = false;
 
-    const maxPerfis = +document.getElementById("maxPerfis").value;
-    const delayMin = +document.getElementById("delayMin").value * 1000;
-    const delayMax = +document.getElementById("delayMax").value * 1000;
+    const max = parseInt(document.getElementById("maxPerfis").value);
+    const fotos = parseInt(document.getElementById("fotosCurtir").value);
+    const delayMin = parseInt(document.getElementById("delayMin").value) * 1000;
+    const delayMax = parseInt(document.getElementById("delayMax").value) * 1000;
 
     log("Iniciando automação...");
 
-    const container = getScrollContainer();
-    if (!container) {
-      log("⚠️ Modal de seguidores não encontrado.", "orange");
-      return;
-    }
+    const getScrollContainer = () => {
+      const dialog = document.querySelector('div[role="dialog"]');
+      if (!dialog) return null;
+      return dialog.querySelector("div[style*='max-height'] ul");
+    };
 
-    let seguidos = 0;
-    const visitados = new Set();
+    const processed = new Set();
 
-    while (seguidos < maxPerfis && !stopBot) {
-      const botoes = [...container.querySelectorAll("li")];
-      let encontrou = false;
+    while (processed.size < max) {
+      if (stopBot) break;
 
-      for (let li of botoes) {
-        if (stopBot) break;
-
-        const btn = li.querySelector("button");
-        const nome = li.querySelector("a")?.innerText?.trim() || "Usuário";
-
-        if (!btn || visitados.has(nome) || !/seguir|follow/i.test(btn.innerText)) continue;
-
-        visitados.add(nome);
-        log(`👤 Seguindo ${nome}...`);
-        btn.click();
-        seguidos++;
-        encontrou = true;
-
-        const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
-        log(`⏳ Aguardando ${Math.floor(espera / 1000)}s...`);
-        await delay(espera);
+      const listaEl = getScrollContainer();
+      if (!listaEl) {
+        log("⚠️ Modal de seguidores não encontrado.", "orange");
         break;
       }
 
-      if (!encontrou) {
-        container.scrollBy(0, 400);
+      const itens = [...listaEl.querySelectorAll('li')];
+
+      let item = itens.find(li => {
+        const btn = li.querySelector('button');
+        const a = li.querySelector('a[href^="/"]');
+        return btn && /seguir|follow/i.test(btn.innerText.trim()) && a && !processed.has(a.href);
+      });
+
+      if (!item) {
+        listaEl.scrollBy(0, 300);
         await delay(1500);
+        continue;
       }
+
+      const link = item.querySelector('a[href^="/"]');
+      const nome = link.getAttribute('href').replace(/\//g, "");
+      processed.add(link.href);
+      log(`Visitando: @${nome}`);
+      link.click();
+
+      await waitFor(() => !document.querySelector('div[role="dialog"]'));
+      await delay(2000);
+
+      if (fotos > 0) {
+        await curtirFotos(fotos);
+      }
+
+      const seguirBtn = [...document.querySelectorAll('button')]
+        .find(b => /^(seguir|follow)$/i.test(b.innerText.trim()));
+      if (seguirBtn) seguirBtn.click();
+
+      window.history.back();
+      const voltou = await waitFor(() => document.querySelector('div[role="dialog"]'), 10000);
+      if (!voltou) {
+        log("⚠️ Não voltou para o modal.", "orange");
+        break;
+      }
+
+      const novaLista = getScrollContainer();
+      if (novaLista) novaLista.scrollBy(0, 200);
+
+      const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+      log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
+      await delay(espera);
     }
 
-    log("✅ Finalizado.");
+    log("✅ Finalizado ou interrompido.");
     isRunning = false;
-  };
+  }
 
   document.getElementById("iniciarBtn").onclick = () => {
     stopBot = false;
