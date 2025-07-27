@@ -128,29 +128,38 @@
 
     log("Iniciando automação...");
 
-    const getScrollContainer = () =>
-      document.querySelector('div[role="dialog"] ul')?.parentElement;
+    const getScrollContainer = () => {
+      const dialog = document.querySelector('div[role="dialog"]');
+      if (!dialog) return null;
+      return (
+        dialog.querySelector('ul > div > div') ||
+        dialog.querySelector('ul > div')
+      );
+    };
 
     const processed = new Set();
 
     while (processed.size < max) {
       if (stopBot) break;
 
-      let item = [...document.querySelectorAll('div[role="dialog"] li')]
+      const listaEl = getScrollContainer();
+      if (!listaEl) {
+        log('Lista de seguidores não encontrada.');
+        break;
+      }
+
+      let item = [...listaEl.querySelectorAll('li')]
         .find(li => {
+          const botao = li.querySelector('button');
           const link = li.querySelector('a');
-          return link && !processed.has(link.innerText.trim());
+          return botao && /seguir|follow/i.test(botao.innerText.trim()) &&
+                 link && !processed.has(link.innerText.trim());
         });
 
       if (!item) {
-        const lista = getScrollContainer();
-        if (lista) {
-          lista.scrollBy(0, 300);
-          await delay(1500);
-          continue;
-        }
-        log('Lista de seguidores não encontrada.');
-        break;
+        listaEl.scrollBy(0, 300);
+        await delay(1500);
+        continue;
       }
 
       const link = item.querySelector('a');
@@ -181,8 +190,8 @@
         break;
       }
 
-      const lista = getScrollContainer();
-      if (lista) lista.scrollBy(0, 150);
+      const listaEl2 = getScrollContainer();
+      if (listaEl2) listaEl2.scrollBy(0, 150);
 
       const espera = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
       log(`⏳ Aguardando ${Math.floor(espera / 1000)}s para o próximo...`);
