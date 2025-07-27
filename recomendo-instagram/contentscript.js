@@ -3,6 +3,7 @@
 let stopBot = false;
 let perfisSeguidos = new Set();
 let isBotRunning = false;
+let botConfig = { maxPerfis: 10, maxCurtidas: 1, minDelay: 3, maxDelay: 6 };
 
 const log = (msg, tipo = 'info') => {
   const prefixo = `[${new Date().toLocaleTimeString()}]`;
@@ -54,10 +55,12 @@ const iniciarBot = async () => {
   stopBot = false;
   log('\u2705 Iniciando aut\u00f4mata\u00e7\u00e3o...');
 
-  const maxPerfis = parseInt(document.getElementById('max').value);
-  const fotosParaCurtir = parseInt(document.getElementById('curtidas').value);
-  const delayMin = parseInt(document.getElementById('delayMin').value);
-  const delayMax = parseInt(document.getElementById('delayMax').value);
+  const {
+    maxPerfis,
+    maxCurtidas: fotosParaCurtir,
+    minDelay: delayMin,
+    maxDelay: delayMax
+  } = botConfig;
 
   const lista = document.querySelectorAll('div[role="dialog"] li');
 
@@ -97,25 +100,11 @@ const pararBot = () => {
   log('\u274C Bot parado pelo usu\u00e1rio.', 'erro');
 };
 
-const criarPainel = () => {
-  const painel = document.createElement('div');
-  painel.id = 'botPanel';
-  painel.style = 'position:fixed;top:10px;right:10px;background:#fff;border:2px solid #000;padding:10px;z-index:9999999;font-family:sans-serif';
-  painel.innerHTML = `
-    <h3>Recomendo Instagram</h3>
-    Nº máx. de perfis por sessão:<br><input id="max" value="10"><br>
-    Qtd. de fotos para curtir (0-4):<br><input id="curtidas" value="1"><br>
-    Delay mínimo (s):<br><input id="delayMin" value="3"><br>
-    Delay máximo (s):<br><input id="delayMax" value="6"><br><br>
-    <button id="startBot">Iniciar Bot</button>
-    <button id="stopBot" style="background:red;color:white;margin-left:5px;">Parar</button>
-  `;
-  document.body.appendChild(painel);
-  
-  document.getElementById('startBot').onclick = iniciarBot;
-  document.getElementById('stopBot').onclick = pararBot;
-};
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'config') {
+    botConfig = request.data;
+    iniciarBot();
+    sendResponse({ status: 'started' });
+  }
+});
 
-if (!document.getElementById('botPanel')) {
-  criarPainel();
-}
